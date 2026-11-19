@@ -12,7 +12,7 @@
               parent="menu_saami_root"
               sequence="10"/>
 
-    <!-- Applications Menu (shows only pending/unapproved applications by default) -->
+    <!-- Applications Menu -->
     <menuitem id="menu_saami_member_application"
               name="Applications"
               parent="menu_saami_membership"
@@ -25,4 +25,17 @@
               parent="menu_saami_membership"
               action="action_saami_member"
               sequence="20"/>
+
+    <!-- Configuration Submenu -->
+    <menuitem id="menu_saami_configuration"
+              name="Configuration"
+              parent="menu_saami_root"
+              sequence="50"/>
+
+    <!-- Saami Products Menu -->
+    <menuitem id="menu_saami_product"
+              name="Saami Products"
+              parent="menu_saami_configuration"
+              action="action_saami_product"
+              sequence="10"/>
 </odoo>

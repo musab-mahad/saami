@@ -25,7 +25,8 @@
         <field name="arch" type="xml">
             <form string="Member Application">
                 <header>
-                    <button name="action_submit_payment" string="Submit for Review" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_create_registration_invoice" string="Generate Invoice" type="object" class="oe_highlight" invisible="state != 'draft' or invoice_id"/>
+                    <button name="action_submit_payment" string="Submit for Review" type="object" class="oe_highlight" invisible="state != 'pending_payment'"/>
                     <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state not in ('pending_payment', 'pending_approval')"/>
                     <button name="action_reject" string="Reject" type="object" invisible="state in ('approved', 'rejected', 'cancelled')"/>
                     <button name="action_cancel" string="Cancel" type="object" invisible="state in ('approved', 'cancelled')"/>
@@ -96,6 +97,7 @@
                             <group>
                                 <group>
                                     <field name="partner_id" readonly="1"/>
+                                    <field name="invoice_id" readonly="1" invisible="not invoice_id"/>
                                     <field name="member_id" readonly="1" invisible="not member_id"/>
                                     <field name="user_id" readonly="1" invisible="not user_id"/>
                                 </group>

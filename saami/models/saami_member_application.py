@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, UserError
 
 
 class SaamiMemberApplication(models.Model):
@@ -69,6 +69,7 @@ class SaamiMemberApplication(models.Model):
     ], string='Status', default='draft', tracking=True, copy=False)
 
     member_id = fields.Many2one('saami.member', string='Member Record', readonly=True, copy=False)
+    invoice_id = fields.Many2one('account.move', string='Registration Invoice', readonly=True, copy=False)
 
     @api.depends('first_name', 'middle_name', 'last_name')
     def _compute_full_name(self):
@@ -78,6 +79,14 @@ class SaamiMemberApplication(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        # Validate that active registration product exists
+        reg_product = self.env['saami.product'].search([
+            ('purpose', '=', 'registration'),
+            ('is_active', '=', True)
+        ], limit=1)
+        if not reg_product:
+            raise UserError(_("Cannot create application: No active Registration Fee product configured in Saami Products."))
+
         Partner = self.env['res.partner']
         for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
@@ -122,6 +131,35 @@ class SaamiMemberApplication(models.Model):
                         rec.partner_id.write(partner_vals)
         return res
 
+    def action_create_registration_invoice(self):
+        """Create registration fee invoice for the application."""
+        AccountMove = self.env['account.move']
+        reg_prod = self.env['saami.product'].search([
+            ('purpose', '=', 'registration'),
+            ('is_active', '=', True)
+        ], limit=1)
+        if not reg_prod:
+            raise UserError(_("No active Registration Fee product configured in Saami Products."))
+
+        for rec in self:
+            if rec.invoice_id:
+                continue
+
+            invoice = AccountMove.create({
+                'move_type': 'out_invoice',
+                'partner_id': rec.partner_id.id,
+                'invoice_origin': rec.name,
+                'invoice_line_ids': [(0, 0, {
+                    'product_id': reg_prod.product_id.id,
+                    'name': reg_prod.description or reg_prod.product_id.name,
+                    'quantity': 1.0,
+                    'price_unit': reg_prod.amount,
+                })],
+            })
+            invoice.action_post()
+            rec.invoice_id = invoice.id
+            rec.state = 'pending_payment'
+
     def action_submit_payment(self):
         """Called once payment for registration fee is initiated / awaiting confirmation."""
         for rec in self:
@@ -135,7 +173,6 @@ class SaamiMemberApplication(models.Model):
             if rec.state == 'approved':
                 continue
 
-            # Ensure partner exists
             partner = rec.partner_id
             if not partner:
                 partner = self.env['res.partner'].create({

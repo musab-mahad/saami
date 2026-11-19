@@ -17,10 +17,13 @@ and capital contributions.
         'base',
         'mail',
         'account',
+        'product',
     ],
     'data': [
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
+        'data/saami_product_data.xml',
+        'views/saami_product_views.xml',
         'views/saami_member_application_views.xml',
         'views/saami_member_views.xml',
         'views/saami_menus.xml',
