@@ -21,6 +21,9 @@ and capital contributions.
     'data': [
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
+        'views/saami_member_application_views.xml',
+        'views/saami_member_views.xml',
+        'views/saami_menus.xml',
     ],
     'installable': True,
     'application': True,

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List / Tree View -->
+    <record id="view_saami_member_application_tree" model="ir.ui.view">
+        <field name="name">saami.member.application.list</field>
+        <field name="model">saami.member.application</field>
+        <field name="arch" type="xml">
+            <list string="Member Applications" decoration-info="state == 'draft'" decoration-warning="state in ('pending_payment', 'pending_approval')" decoration-success="state == 'approved'" decoration-muted="state in ('rejected', 'cancelled')">
+                <field name="name"/>
+                <field name="full_name"/>
+                <field name="mobile"/>
+                <field name="email"/>
+                <field name="district"/>
+                <field name="state_id"/>
+                <field name="create_date" string="Applied On"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state in ('pending_payment', 'pending_approval')" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'" decoration-muted="state == 'cancelled'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_saami_member_application_form" model="ir.ui.view">
+        <field name="name">saami.member.application.form</field>
+        <field name="model">saami.member.application</field>
+        <field name="arch" type="xml">
+            <form string="Member Application">
+                <header>
+                    <button name="action_submit_payment" string="Submit for Review" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state not in ('pending_payment', 'pending_approval')"/>
+                    <button name="action_reject" string="Reject" type="object" invisible="state in ('approved', 'rejected', 'cancelled')"/>
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state in ('approved', 'cancelled')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending_payment,pending_approval,approved"/>
+                </header>
+                <sheet>
+                    <field name="photo" widget="image" class="oe_avatar" options="{'preview_image': 'photo'}"/>
+                    <div class="oe_title">
+                        <label for="name" string="Application No."/>
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                        <h2>
+                            <field name="full_name" placeholder="Full Name"/>
+                        </h2>
+                    </div>
+                    <group>
+                        <group string="Personal Information">
+                            <field name="first_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="middle_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="last_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="mother_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="gender" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="date_of_birth" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="education_level" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                        </group>
+                        <group string="Contact &amp; Location">
+                            <field name="mobile" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="email" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="country_id" options="{'no_open': True, 'no_create': True}" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="state_id" options="{'no_open': True, 'no_create': True}" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="district" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                            <field name="residence_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Next of Kin" name="kin">
+                            <group>
+                                <group string="First Next of Kin">
+                                    <field name="kin1_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                    <field name="kin1_mobile" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                    <field name="kin1_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                </group>
+                                <group string="Second Next of Kin">
+                                    <field name="kin2_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                    <field name="kin2_mobile" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                    <field name="kin2_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Banking Details" name="banking">
+                            <group>
+                                <group>
+                                    <field name="bank_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                    <field name="bank_account_no" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                    <field name="bank_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="KYC Documents" name="kyc">
+                            <group>
+                                <group>
+                                    <field name="identity_file" filename="name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Linked System Records" name="system_links">
+                            <group>
+                                <group>
+                                    <field name="partner_id" readonly="1"/>
+                                    <field name="member_id" readonly="1" invisible="not member_id"/>
+                                    <field name="user_id" readonly="1" invisible="not user_id"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_saami_member_application_search" model="ir.ui.view">
+        <field name="name">saami.member.application.search</field>
+        <field name="model">saami.member.application</field>
+        <field name="arch" type="xml">
+            <search string="Search Applications">
+                <field name="name" string="Application No."/>
+                <field name="full_name" string="Applicant Name"/>
+                <field name="mobile"/>
+                <field name="email"/>
+                <field name="district"/>
+                <filter name="filter_pending_review" string="Pending Review" domain="[('state', 'in', ('pending_payment', 'pending_approval'))]"/>
+                <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_approved" string="Approved" domain="[('state', '=', 'approved')]"/>
+                <separator/>
+                <filter name="filter_gender_male" string="Male" domain="[('gender', '=', 'male')]"/>
+                <filter name="filter_gender_female" string="Female" domain="[('gender', '=', 'female')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_by_district" string="District" context="{'group_by': 'district'}"/>
+                    <filter name="group_by_state_id" string="Region" context="{'group_by': 'state_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action: Applications (filtered to non-approved by default as requested) -->
+    <record id="action_saami_member_application" model="ir.actions.act_window">
+        <field name="name">Applications</field>
+        <field name="res_model">saami.member.application</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', '!=', 'approved')]</field>
+        <field name="context">{'search_default_filter_pending_review': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No member applications awaiting review!
+            </p>
+            <p>
+                Applications submitted from web and mobile apps will appear here for review and approval.
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Top Level Menu -->
+    <menuitem id="menu_saami_root"
+              name="Saami"
+              sequence="10"
+              web_icon="saami,static/description/icon.png"/>
+
+    <!-- Operations / Management Submenu -->
+    <menuitem id="menu_saami_membership"
+              name="Membership"
+              parent="menu_saami_root"
+              sequence="10"/>
+
+    <!-- Applications Menu (shows only pending/unapproved applications by default) -->
+    <menuitem id="menu_saami_member_application"
+              name="Applications"
+              parent="menu_saami_membership"
+              action="action_saami_member_application"
+              sequence="10"/>
+
+    <!-- Members Menu -->
+    <menuitem id="menu_saami_member"
+              name="Members"
+              parent="menu_saami_membership"
+              action="action_saami_member"
+              sequence="20"/>
+</odoo>
