@@ -20,6 +20,7 @@ and capital contributions.
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/ir_sequence_data.xml',
     ],
     'installable': True,
     'application': True,

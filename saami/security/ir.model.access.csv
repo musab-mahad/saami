@@ -1,1 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_saami_member_application_user,saami.member.application.user,model_saami_member_application,base.group_user,1,1,1,1
+access_saami_member_user,saami.member.user,model_saami_member,base.group_user,1,1,1,1
