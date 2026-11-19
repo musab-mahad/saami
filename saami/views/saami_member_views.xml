@@ -12,7 +12,7 @@
                 <field name="email"/>
                 <field name="district"/>
                 <field name="state_id"/>
-                <field name="total_contributions" widget="monetary" sum="Total Contributions"/>
+                <field name="total_contributions" widget="monetary" sum="Total Contributions" width="150px"/>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="state" widget="badge" decoration-success="state == 'active'" decoration-warning="state == 'suspended'" decoration-danger="state == 'terminated'"/>
             </list>
