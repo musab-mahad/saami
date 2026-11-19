@@ -15,14 +15,18 @@ class SaamiMemberApplication(models.Model):
         copy=False,
         default=lambda self: _('New'),
     )
+    partner_id = fields.Many2one('res.partner', string='Partner', ondelete='restrict', copy=False)
+    user_id = fields.Many2one('res.users', string='Portal User', copy=False)
+
     first_name = fields.Char(string='First Name', required=True, tracking=True)
     middle_name = fields.Char(string='Middle Name', required=True, tracking=True)
     last_name = fields.Char(string='Last Name', required=True, tracking=True)
     full_name = fields.Char(string='Full Name', compute='_compute_full_name', store=True)
 
-    mother_name = fields.Char(string='Mother Name', required=True)
     mobile = fields.Char(string='Mobile', required=True, tracking=True)
     email = fields.Char(string='Email', required=True, tracking=True)
+
+    mother_name = fields.Char(string='Mother Name', required=True)
     date_of_birth = fields.Date(string='Date of Birth', required=True)
     gender = fields.Selection([
         ('male', 'Male'),
@@ -65,8 +69,6 @@ class SaamiMemberApplication(models.Model):
     ], string='Status', default='draft', tracking=True, copy=False)
 
     member_id = fields.Many2one('saami.member', string='Member Record', readonly=True, copy=False)
-    partner_id = fields.Many2one('res.partner', string='Partner', readonly=True, copy=False)
-    user_id = fields.Many2one('res.users', string='Portal User', readonly=True, copy=False)
 
     @api.depends('first_name', 'middle_name', 'last_name')
     def _compute_full_name(self):
@@ -76,10 +78,49 @@ class SaamiMemberApplication(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        Partner = self.env['res.partner']
         for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('saami.member.application') or _('New')
-        return super().create(vals_list)
+
+            # Ensure partner_id is created or linked upfront
+            if not vals.get('partner_id'):
+                full_name = ' '.join(filter(None, [
+                    vals.get('first_name', ''),
+                    vals.get('middle_name', ''),
+                    vals.get('last_name', ''),
+                ]))
+                partner_vals = {
+                    'name': full_name or vals.get('email', _('New Applicant')),
+                    'email': vals.get('email'),
+                    'phone': vals.get('mobile'),
+                    'street': vals.get('residence_address'),
+                    'country_id': vals.get('country_id'),
+                    'state_id': vals.get('state_id'),
+                    'city': vals.get('district'),
+                }
+                partner = Partner.create(partner_vals)
+                vals['partner_id'] = partner.id
+
+        records = super().create(vals_list)
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        # Sync name/mobile/email to partner if updated on application
+        if any(f in vals for f in ['first_name', 'middle_name', 'last_name', 'mobile', 'email']):
+            for rec in self:
+                if rec.partner_id:
+                    partner_vals = {}
+                    if 'first_name' in vals or 'middle_name' in vals or 'last_name' in vals:
+                        partner_vals['name'] = rec.full_name
+                    if 'mobile' in vals:
+                        partner_vals['phone'] = rec.mobile
+                    if 'email' in vals:
+                        partner_vals['email'] = rec.email
+                    if partner_vals:
+                        rec.partner_id.write(partner_vals)
+        return res
 
     def action_submit_payment(self):
         """Called once payment for registration fee is initiated / awaiting confirmation."""
@@ -89,15 +130,15 @@ class SaamiMemberApplication(models.Model):
     def action_approve(self):
         """Approve the application and create the saami.member record."""
         Member = self.env['saami.member']
-        Partner = self.env['res.partner']
 
         for rec in self:
             if rec.state == 'approved':
                 continue
 
-            # Create or link partner
-            if not rec.partner_id:
-                partner = Partner.create({
+            # Ensure partner exists
+            partner = rec.partner_id
+            if not partner:
+                partner = self.env['res.partner'].create({
                     'name': rec.full_name,
                     'email': rec.email,
                     'phone': rec.mobile,
@@ -107,10 +148,7 @@ class SaamiMemberApplication(models.Model):
                     'city': rec.district,
                 })
                 rec.partner_id = partner.id
-            else:
-                partner = rec.partner_id
 
-            # Create saami.member
             member = Member.create({
                 'application_id': rec.id,
                 'partner_id': partner.id,

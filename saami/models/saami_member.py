@@ -23,9 +23,22 @@ class SaamiMember(models.Model):
     last_name = fields.Char(string='Last Name', required=True, tracking=True)
     full_name = fields.Char(string='Full Name', compute='_compute_full_name', store=True)
 
+    mobile = fields.Char(
+        string='Mobile',
+        compute='_compute_mobile',
+        inverse='_inverse_mobile',
+        store=True,
+        tracking=True,
+    )
+    email = fields.Char(
+        string='Email',
+        compute='_compute_email',
+        inverse='_inverse_email',
+        store=True,
+        tracking=True,
+    )
+
     mother_name = fields.Char(string='Mother Name', required=True)
-    mobile = fields.Char(string='Mobile', required=True, tracking=True)
-    email = fields.Char(string='Email', required=True, tracking=True)
     date_of_birth = fields.Date(string='Date of Birth', required=True)
     gender = fields.Selection([
         ('male', 'Male'),
@@ -81,6 +94,26 @@ class SaamiMember(models.Model):
             names = [rec.first_name, rec.middle_name, rec.last_name]
             rec.full_name = ' '.join(filter(None, names))
 
+    @api.depends('partner_id.phone')
+    def _compute_mobile(self):
+        for rec in self:
+            rec.mobile = rec.partner_id.phone
+
+    def _inverse_mobile(self):
+        for rec in self:
+            if rec.partner_id and rec.mobile:
+                rec.partner_id.phone = rec.mobile
+
+    @api.depends('partner_id.email')
+    def _compute_email(self):
+        for rec in self:
+            rec.email = rec.partner_id.email
+
+    def _inverse_email(self):
+        for rec in self:
+            if rec.partner_id and rec.email:
+                rec.partner_id.email = rec.email
+
     def _compute_total_contributions(self):
         for rec in self:
             # Placeholder until contribution model/ledger is hooked up
@@ -91,7 +124,20 @@ class SaamiMember(models.Model):
         for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('saami.member') or _('New')
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        # Ensure partner name is in sync if created
+        for rec in records:
+            if rec.partner_id and rec.full_name:
+                rec.partner_id.name = rec.full_name
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if any(f in vals for f in ['first_name', 'middle_name', 'last_name']):
+            for rec in self:
+                if rec.partner_id and rec.full_name:
+                    rec.partner_id.name = rec.full_name
+        return res
 
     def action_suspend(self):
         self.write({'state': 'suspended'})
