@@ -16,7 +16,7 @@ class SaamiMember(models.Model):
     )
     application_id = fields.Many2one('saami.member.application', string='Application', readonly=True)
     partner_id = fields.Many2one('res.partner', string='Partner', required=True, ondelete='restrict')
-    user_id = fields.Many2one('res.users', string='User Account', related='partner_id.user_ids', readonly=True)
+    user_id = fields.Many2one('res.users', string='User Account', compute='_compute_user_id', store=True)
 
     first_name = fields.Char(string='First Name', required=True, tracking=True)
     middle_name = fields.Char(string='Middle Name', required=True, tracking=True)
@@ -87,6 +87,11 @@ class SaamiMember(models.Model):
         string='Currency',
         default=lambda self: self.env.company.currency_id,
     )
+
+    @api.depends('partner_id.user_ids')
+    def _compute_user_id(self):
+        for rec in self:
+            rec.user_id = rec.partner_id.user_ids[:1] if rec.partner_id and rec.partner_id.user_ids else False
 
     @api.depends('first_name', 'middle_name', 'last_name')
     def _compute_full_name(self):
