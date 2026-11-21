@@ -12,9 +12,19 @@ _logger = logging.getLogger(__name__)
 class WaafiPayController(http.Controller):
     _webhook_url = '/payment/waafipay/webhook'
 
-    @http.route(_webhook_url, type='json', auth='public', methods=['POST'], csrf=False)
+    @http.route(_webhook_url, type='http', auth='public', methods=['POST'], csrf=False)
     def waafipay_webhook(self):
         """ Process the notification data sent by WaafiPay. """
-        data = request.get_json_data()
+        data = request.get_json_data() or request.params
         _logger.info("Notification received from WaafiPay:\n%s", pprint.pformat(data))
-        return "OK"
+        if not data:
+            return request.make_json_response({'status': 'error', 'message': 'No data received'}, status=400)
+
+        try:
+            tx_sudo = request.env['payment.transaction'].sudo()._get_tx_from_notification_data('waafipay', data)
+            tx_sudo._handle_notification_data('waafipay', data)
+        except Exception as e:
+            _logger.error("WaafiPay: Error processing webhook notification: %s", e)
+            return request.make_json_response({'status': 'error', 'message': str(e)}, status=400)
+
+        return request.make_json_response({'status': 'success', 'message': 'Notification processed'}, status=200)

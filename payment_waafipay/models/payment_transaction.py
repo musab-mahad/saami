@@ -87,3 +87,42 @@ class PaymentTransaction(models.Model):
                 'success': False,
                 'message': err_msg,
             }
+
+    def _get_tx_from_notification_data(self, provider_code, notification_data):
+        """ Find the transaction based on the notification data from WaafiPay. """
+        tx = super()._get_tx_from_notification_data(provider_code, notification_data)
+        if provider_code != 'waafipay' or len(tx) == 1:
+            return tx
+
+        params = notification_data.get('params', {}) or {}
+        reference = params.get('referenceId') or notification_data.get('referenceId')
+        if not reference:
+            raise ValidationError("WaafiPay: " + _("Received notification with missing reference."))
+
+        tx = self.search([('reference', '=', reference), ('provider_code', '=', 'waafipay')])
+        if not tx:
+            raise ValidationError(
+                "WaafiPay: " + _("No transaction found matching reference %s.", reference)
+            )
+        return tx
+
+    def _process_notification_data(self, notification_data):
+        """ Process the transaction state based on WaafiPay notification data. """
+        super()._process_notification_data(notification_data)
+        if self.provider_code != 'waafipay':
+            return
+
+        params = notification_data.get('params', {}) or {}
+        response_code = str(notification_data.get('responseCode') or params.get('responseCode', ''))
+        tx_id = params.get('transactionId') or notification_data.get('transactionId')
+
+        if tx_id:
+            self.write({'waafipay_tx_id': tx_id})
+
+        if response_code in ('2001', '0'):
+            self._set_done()
+        elif response_code in ('1001',):
+            self._set_pending()
+        else:
+            err_msg = notification_data.get('responseMsg') or params.get('responseMsg') or _("Transaction failed")
+            self._set_error(err_msg)
