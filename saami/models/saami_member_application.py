@@ -215,7 +215,7 @@ class SaamiMemberApplication(models.Model):
             raise UserError(_("No active Registration Fee product configured in Saami Products."))
 
         for rec in self:
-            if rec.invoice_id:
+            if rec.invoice_id and rec.invoice_id.state != 'cancel':
                 continue
 
             invoice = AccountMove.create({
@@ -420,4 +420,20 @@ class SaamiMemberApplication(models.Model):
                 rec._send_application_rejected_email()
 
     def action_cancel(self):
-        self.write({'state': 'cancelled'})
+        """Cancel application and handle linked registration invoice."""
+        for rec in self:
+            if rec.state == 'cancelled':
+                continue
+            if rec.member_id:
+                raise UserError(_(
+                    "Cannot cancel application #%s: Official member %s has already been approved and created."
+                ) % (rec.name, rec.member_id.name))
+            if rec.invoice_id:
+                if rec.invoice_id.payment_state in ('paid', 'in_payment'):
+                    raise UserError(_(
+                        "Cannot cancel application #%s: The registration fee has already been paid (%s). "
+                        "Please process a refund or cancel the invoice in Accounting before cancelling."
+                    ) % (rec.name, rec.invoice_id.name))
+                if rec.invoice_id.state != 'cancel':
+                    rec.invoice_id.button_cancel()
+            rec.state = 'cancelled'

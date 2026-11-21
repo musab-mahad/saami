@@ -88,81 +88,139 @@ class SaamiApiController(http.Controller):
             return send_json({'code': 'VALIDATION_ERROR', 'message': f"Missing required fields: {', '.join(missing)}"}, status=400)
 
         email = data['email'].strip().lower()
-        Users = request.env['res.users'].sudo()
-        if Users.search([('login', '=', email)], limit=1):
+        bot_env = get_saami_bot_env()
+        Application = bot_env['saami.member.application']
+        Users = bot_env['res.users']
+
+        existing_app = Application.search([('email', '=ilike', email)], limit=1)
+        existing_user = Users.search([('login', '=ilike', email)], limit=1)
+
+        if existing_app:
+            if existing_app.state != 'cancelled':
+                return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account or active application with this email already exists.'}, status=400)
+        elif existing_user:
             return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account with this email already exists.'}, status=400)
 
         try:
-            bot_env = get_saami_bot_env()
             company = bot_env.company
             state_id = int(data['state_id'])
             district_id = int(data['district_id'])
             district_rec = bot_env['saami.district'].browse(district_id)
             district_name = district_rec.name if district_rec.exists() else (data.get('district') or '')
-
-            # 1. Create Partner
             full_name = f"{data['first_name']} {data['middle_name']} {data['last_name']}".strip()
-            partner = bot_env['res.partner'].create({
-                'name': full_name,
-                'email': email,
-                'phone': data['mobile'],
-                'street': data['residence_address'],
-                'country_id': int(data['country_id']),
-                'state_id': state_id,
-                'city': district_name,
-                'company_id': company.id,
-            })
 
-            # 2. Create Portal User (suppress default Odoo connect/invitation email)
-            portal_group = bot_env.ref('base.group_portal')
-            user = bot_env['res.users'].with_context(
-                no_reset_password=True,
-                mail_create_nosubscribe=True,
-                mail_create_nolog=True,
-                signup_valid=False,
-            ).create({
-                'name': full_name,
-                'login': email,
-                'email': email,
-                'password': data['password'],
-                'partner_id': partner.id,
-                'company_id': company.id,
-                'company_ids': [(6, 0, [company.id])],
-                'groups_id': [(6, 0, [portal_group.id])],
-            })
+            if existing_app:
+                # Re-apply for a previously cancelled application
+                partner = existing_app.partner_id
+                if partner:
+                    partner.write({
+                        'name': full_name,
+                        'email': email,
+                        'phone': data['mobile'],
+                        'street': data['residence_address'],
+                        'country_id': int(data['country_id']),
+                        'state_id': state_id,
+                        'city': district_name,
+                    })
+                user = existing_app.user_id or existing_user
+                if user:
+                    user.write({
+                        'name': full_name,
+                        'password': data['password'],
+                    })
+                app_vals = {
+                    'first_name': data['first_name'],
+                    'middle_name': data['middle_name'],
+                    'last_name': data['last_name'],
+                    'mother_name': data['mother_name'],
+                    'mobile': data['mobile'],
+                    'date_of_birth': data['date_of_birth'],
+                    'gender': data['gender'],
+                    'education_level': data['education_level'],
+                    'country_id': int(data['country_id']),
+                    'state_id': state_id,
+                    'district_id': district_id,
+                    'district': district_name,
+                    'residence_address': data['residence_address'],
+                    'bank_name': data.get('bank_name'),
+                    'bank_address': data.get('bank_address'),
+                    'bank_account_no': data.get('bank_account_no'),
+                    'kin1_name': data['kin1_name'],
+                    'kin1_address': data['kin1_address'],
+                    'kin1_mobile': data['kin1_mobile'],
+                    'kin2_name': data.get('kin2_name'),
+                    'kin2_address': data.get('kin2_address'),
+                    'kin2_mobile': data.get('kin2_mobile'),
+                    'photo': data.get('photo'),
+                    'identity_file': data.get('identity_file'),
+                    'state': 'pending_payment',
+                    'email_payment_received_sent': False,
+                }
+                existing_app.write(app_vals)
+                application = existing_app
+            else:
+                # 1. Create Partner
+                partner = bot_env['res.partner'].create({
+                    'name': full_name,
+                    'email': email,
+                    'phone': data['mobile'],
+                    'street': data['residence_address'],
+                    'country_id': int(data['country_id']),
+                    'state_id': state_id,
+                    'city': district_name,
+                    'company_id': company.id,
+                })
 
-            # 3. Create Application
-            app_vals = {
-                'partner_id': partner.id,
-                'user_id': user.id,
-                'first_name': data['first_name'],
-                'middle_name': data['middle_name'],
-                'last_name': data['last_name'],
-                'mother_name': data['mother_name'],
-                'mobile': data['mobile'],
-                'email': email,
-                'date_of_birth': data['date_of_birth'],
-                'gender': data['gender'],
-                'education_level': data['education_level'],
-                'country_id': int(data['country_id']),
-                'state_id': state_id,
-                'district_id': district_id,
-                'district': district_name,
-                'residence_address': data['residence_address'],
-                'bank_name': data.get('bank_name'),
-                'bank_address': data.get('bank_address'),
-                'bank_account_no': data.get('bank_account_no'),
-                'kin1_name': data['kin1_name'],
-                'kin1_address': data['kin1_address'],
-                'kin1_mobile': data['kin1_mobile'],
-                'kin2_name': data.get('kin2_name'),
-                'kin2_address': data.get('kin2_address'),
-                'kin2_mobile': data.get('kin2_mobile'),
-                'photo': data.get('photo'),
-                'identity_file': data.get('identity_file'),
-                'state': 'pending_payment',
-            }
-            application = bot_env['saami.member.application'].create(app_vals)
+                # 2. Create Portal User (suppress default Odoo connect/invitation email)
+                portal_group = bot_env.ref('base.group_portal')
+                user = bot_env['res.users'].with_context(
+                    no_reset_password=True,
+                    mail_create_nosubscribe=True,
+                    mail_create_nolog=True,
+                    signup_valid=False,
+                ).create({
+                    'name': full_name,
+                    'login': email,
+                    'email': email,
+                    'password': data['password'],
+                    'partner_id': partner.id,
+                    'company_id': company.id,
+                    'company_ids': [(6, 0, [company.id])],
+                    'groups_id': [(6, 0, [portal_group.id])],
+                })
+
+                # 3. Create Application
+                app_vals = {
+                    'partner_id': partner.id,
+                    'user_id': user.id,
+                    'first_name': data['first_name'],
+                    'middle_name': data['middle_name'],
+                    'last_name': data['last_name'],
+                    'mother_name': data['mother_name'],
+                    'mobile': data['mobile'],
+                    'email': email,
+                    'date_of_birth': data['date_of_birth'],
+                    'gender': data['gender'],
+                    'education_level': data['education_level'],
+                    'country_id': int(data['country_id']),
+                    'state_id': state_id,
+                    'district_id': district_id,
+                    'district': district_name,
+                    'residence_address': data['residence_address'],
+                    'bank_name': data.get('bank_name'),
+                    'bank_address': data.get('bank_address'),
+                    'bank_account_no': data.get('bank_account_no'),
+                    'kin1_name': data['kin1_name'],
+                    'kin1_address': data['kin1_address'],
+                    'kin1_mobile': data['kin1_mobile'],
+                    'kin2_name': data.get('kin2_name'),
+                    'kin2_address': data.get('kin2_address'),
+                    'kin2_mobile': data.get('kin2_mobile'),
+                    'photo': data.get('photo'),
+                    'identity_file': data.get('identity_file'),
+                    'state': 'pending_payment',
+                }
+                application = bot_env['saami.member.application'].create(app_vals)
 
             # 4. Generate Registration Invoice
             application.action_create_registration_invoice()
