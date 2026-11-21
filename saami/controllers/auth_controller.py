@@ -526,18 +526,11 @@ class SaamiAuthController(http.Controller):
 
         current_password = data.get('current_password') or data.get('old_password') or ''
         new_password = data.get('new_password') or ''
-        confirm_password = data.get('confirm_password')
 
         if not current_password or not new_password:
             return send_json({
                 'code': 'VALIDATION_ERROR',
                 'message': 'Both current_password and new_password are required.',
-            }, status=400)
-
-        if confirm_password is not None and new_password != confirm_password:
-            return send_json({
-                'code': 'PASSWORD_MISMATCH',
-                'message': 'New password and confirm password do not match.',
             }, status=400)
 
         if len(new_password) < 8:
