@@ -96,7 +96,7 @@ class SaamiApiController(http.Controller):
         existing_user = Users.search([('login', '=ilike', email)], limit=1)
 
         if existing_app:
-            if existing_app.state != 'cancelled':
+            if existing_app.state not in ('cancelled', 'rejected'):
                 return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account or active application with this email already exists.'}, status=400)
         elif existing_user:
             return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account with this email already exists.'}, status=400)
@@ -110,7 +110,7 @@ class SaamiApiController(http.Controller):
             full_name = f"{data['first_name']} {data['middle_name']} {data['last_name']}".strip()
 
             if existing_app:
-                # Re-apply for a previously cancelled application
+                # Re-apply for a previously cancelled or rejected application
                 partner = existing_app.partner_id
                 if partner:
                     partner.write({
