@@ -122,12 +122,51 @@ class SaamiApiController(http.Controller):
                         'state_id': state_id,
                         'city': district_name,
                     })
+                else:
+                    partner = bot_env['res.partner'].create({
+                        'name': full_name,
+                        'email': email,
+                        'phone': data['mobile'],
+                        'street': data['residence_address'],
+                        'country_id': int(data['country_id']),
+                        'state_id': state_id,
+                        'city': district_name,
+                        'company_id': company.id,
+                    })
+                    existing_app.partner_id = partner.id
+
+                portal_group = bot_env.ref('base.group_portal')
                 user = existing_app.user_id or existing_user
                 if user:
                     user.write({
                         'name': full_name,
                         'password': data['password'],
+                        'active': True,
                     })
+                else:
+                    user = bot_env['res.users'].with_context(
+                        no_reset_password=True,
+                        mail_create_nosubscribe=True,
+                        mail_create_nolog=True,
+                        signup_valid=False,
+                    ).create({
+                        'name': full_name,
+                        'login': email,
+                        'email': email,
+                        'password': data['password'],
+                        'partner_id': partner.id,
+                        'company_id': company.id,
+                        'company_ids': [(6, 0, [company.id])],
+                        'groups_id': [(6, 0, [portal_group.id])],
+                    })
+                existing_app.user_id = user.id
+
+                # Cancel previous unpaid invoice and detach to force a fresh invoice
+                if existing_app.invoice_id:
+                    if existing_app.invoice_id.payment_state not in ('paid', 'in_payment') and existing_app.invoice_id.state != 'cancel':
+                        existing_app.invoice_id.button_cancel()
+                    existing_app.invoice_id = False
+
                 app_vals = {
                     'first_name': data['first_name'],
                     'middle_name': data['middle_name'],
