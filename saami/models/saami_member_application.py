@@ -76,6 +76,11 @@ class SaamiMemberApplication(models.Model):
         string='Payment Status',
         readonly=True,
     )
+    transaction_ids = fields.One2many(
+        'saami.contribution.transaction',
+        'application_id',
+        string='Transactions',
+    )
     email_payment_received_sent = fields.Boolean(
         string='Payment Received Email Sent',
         default=False,
