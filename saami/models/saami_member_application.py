@@ -151,6 +151,18 @@ class SaamiMemberApplication(models.Model):
                     rec.state = 'pending_approval'
                 else:
                     rec.state = 'pending_payment'
+            if hasattr(rec, 'with_delay'):
+                rec.with_delay()._send_application_received_email()
+            else:
+                rec._send_application_received_email()
+
+    def _send_application_received_email(self):
+        """Send email acknowledging application submission (async via queue_job)."""
+        template = self.env.ref('saami.mail_template_application_received', raise_if_not_found=False)
+        if not template:
+            return
+        for rec in self:
+            template.send_mail(rec.id, force_send=True)
 
     def action_create_registration_invoice(self):
         """Create registration fee invoice for the application."""

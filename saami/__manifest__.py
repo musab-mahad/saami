@@ -19,6 +19,7 @@ and capital contributions.
         'account',
         'product',
         'payment',
+        'queue_job',
     ],
     'data': [
         'security/ir.model.access.csv',
@@ -27,6 +28,7 @@ and capital contributions.
         'data/saami_product_data.xml',
         'data/saami_location_data.xml',
         'data/saami_cron.xml',
+        'data/saami_mail_templates.xml',
         'wizards/saami_create_user_wizard_views.xml',
         'views/res_config_settings_views.xml',
         'views/saami_dashboard_views.xml',

@@ -162,6 +162,12 @@ class SaamiApiController(http.Controller):
             # 4. Generate Registration Invoice
             application.action_create_registration_invoice()
 
+            # 5. Send Welcome & Application Received Email (Async via queue_job)
+            if hasattr(application, 'with_delay'):
+                application.with_delay()._send_application_received_email()
+            else:
+                application._send_application_received_email()
+
             return send_json({
                 'code': 'SUCCESS',
                 'message': 'Registration submitted successfully. Please proceed with registration fee payment.',
