@@ -68,8 +68,8 @@ class PaymentTransaction(models.Model):
                     except Exception as e:
                         _logger.warning("Could not auto-register payment for registration invoice %s: %s", app.invoice_id.name, e)
 
-                app.write({'state': 'pending_approval'})
                 if app.invoice_id and app.invoice_id.payment_state in ('paid', 'in_payment') and app.invoice_id.amount_residual <= 0:
+                    app.write({'state': 'pending_approval'})
                     if hasattr(app, 'with_delay'):
                         app.with_delay()._send_payment_received_email()
                     else:

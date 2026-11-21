@@ -319,9 +319,10 @@ class SaamiApiController(http.Controller):
             provider.payment_method_ids = [(4, payment_method.id)]
 
         # Create payment.transaction
+        pay_amount = float(data.get('amount')) if data.get('amount') else (invoice.amount_residual or invoice.amount_total)
         reference = f"REG-{app.name}-{fields.Datetime.now().strftime('%Y%m%d%H%M%S')}"
         tx = request.env['payment.transaction'].sudo().create({
-            'amount': invoice.amount_residual or invoice.amount_total,
+            'amount': pay_amount,
             'currency_id': invoice.currency_id.id,
             'provider_id': provider.id,
             'payment_method_id': payment_method.id,
