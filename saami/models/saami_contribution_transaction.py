@@ -17,7 +17,7 @@ class SaamiContributionTransaction(models.Model):
     member_id = fields.Many2one(
         'saami.member',
         string='Member',
-        required=True,
+        required=False,
         ondelete='cascade',
         index=True,
         tracking=True,

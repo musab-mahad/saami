@@ -18,6 +18,7 @@ and capital contributions.
         'mail',
         'account',
         'product',
+        'payment',
     ],
     'data': [
         'security/ir.model.access.csv',
