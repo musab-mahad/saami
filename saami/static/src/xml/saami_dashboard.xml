@@ -1,15 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<templates>
+<templates xml:space="preserve">
     <t t-name="saami.Dashboard">
         <div class="o_action o_view_controller container-fluid py-4 px-4 overflow-auto" style="height: 100%;">
-            <!-- Header with Title & Top-Right Filter -->
-            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-                <div>
-                    <h2 class="fw-bold mb-1 text-primary">Saami Cooperative Overview</h2>
-                    <p class="text-muted mb-0">Live summary of members, applications, and capital contributions</p>
-                </div>
-
-                <!-- Top Right Filter -->
+            <!-- Header: Blank on Left, Filter Preserved Exactly as Ours on Top Right -->
+            <div class="d-flex justify-content-end align-items-center mb-4">
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted small fw-semibold"><i class="fa fa-filter me-1"></i>Period:</span>
                     <select class="form-select form-select-sm shadow-sm" style="width: auto; min-width: 150px;" t-att-value="this.state.date_range" t-on-change="this._onDateRangeChange">
@@ -27,21 +21,21 @@
                 </div>
             </div>
 
-            <!-- Summary Cards Row -->
+            <!-- Summary Cards: OUR EXACT TITLES, ORDER, VALUES, ICONS, WITH CARD DESIGN COPIED -->
             <div class="row g-3 mb-4">
                 <!-- Card 1: Active Members -->
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 rounded-3">
-                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #3b82f6 !important; border-radius: 0px !important;">
+                        <div class="d-flex align-items-center justify-content-between">
                             <div>
-                                <span class="text-muted text-uppercase fw-semibold small">Active Members</span>
-                                <h3 class="fw-bold my-1 text-dark">
+                                <div class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Active Members</div>
+                                <h2 class="fw-bold text-dark mb-1" style="font-size: 1.8rem;">
                                     <t t-esc="this.state.total_active_members"/>
-                                </h3>
-                                <span class="badge bg-success-subtle text-success small">Registered</span>
+                                </h2>
+                                <div class="text-muted" style="font-size: 0.8rem;">Registered</div>
                             </div>
-                            <div class="bg-primary-subtle text-primary p-3 rounded-circle">
-                                <i class="fa fa-users fa-2x"></i>
+                            <div class="fs-1 text-primary opacity-50">
+                                <i class="fa fa-users"/>
                             </div>
                         </div>
                     </div>
@@ -49,17 +43,17 @@
 
                 <!-- Card 2: Pending Applications -->
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 rounded-3">
-                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #10b981 !important; border-radius: 0px !important;">
+                        <div class="d-flex align-items-center justify-content-between">
                             <div>
-                                <span class="text-muted text-uppercase fw-semibold small">Pending Applications</span>
-                                <h3 class="fw-bold my-1 text-dark">
+                                <div class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Pending Applications</div>
+                                <h2 class="fw-bold text-dark mb-1" style="font-size: 1.8rem;">
                                     <t t-esc="this.state.pending_applications"/>
-                                </h3>
-                                <span class="badge bg-warning-subtle text-warning small">Review Required</span>
+                                </h2>
+                                <div class="text-muted" style="font-size: 0.8rem;">Review Required</div>
                             </div>
-                            <div class="bg-warning-subtle text-warning p-3 rounded-circle">
-                                <i class="fa fa-clock-o fa-2x"></i>
+                            <div class="fs-1 text-success opacity-50">
+                                <i class="fa fa-clock-o"/>
                             </div>
                         </div>
                     </div>
@@ -67,35 +61,35 @@
 
                 <!-- Card 3: Total Contributed Capital -->
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 rounded-3">
-                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #8b5cf6 !important; border-radius: 0px !important;">
+                        <div class="d-flex align-items-center justify-content-between">
                             <div>
-                                <span class="text-muted text-uppercase fw-semibold small">Total Contributed Capital</span>
-                                <h3 class="fw-bold my-1 text-success">
+                                <div class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Total Contributed Capital</div>
+                                <h2 class="fw-bold text-dark mb-1" style="font-size: 1.8rem;">
                                     <t t-esc="this.state.currency"/> <t t-esc="this.formattedTotalContributions"/>
-                                </h3>
-                                <span class="badge bg-info-subtle text-info small">Cumulative Equity</span>
+                                </h2>
+                                <div class="text-muted" style="font-size: 0.8rem;">Cumulative Equity</div>
                             </div>
-                            <div class="bg-success-subtle text-success p-3 rounded-circle">
-                                <i class="fa fa-university fa-2x"></i>
+                            <div class="fs-1 opacity-50" style="color: #8b5cf6 !important;">
+                                <i class="fa fa-university"/>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Card 4: Contributions in Period -->
+                <!-- Card 4: Period Contributions -->
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm border-0 h-100 rounded-3">
-                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #f59e0b !important; border-radius: 0px !important;">
+                        <div class="d-flex align-items-center justify-content-between">
                             <div>
-                                <span class="text-muted text-uppercase fw-semibold small">Period Contributions</span>
-                                <h3 class="fw-bold my-1 text-primary">
+                                <div class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Period Contributions</div>
+                                <h2 class="fw-bold text-dark mb-1" style="font-size: 1.8rem;">
                                     <t t-esc="this.state.currency"/> <t t-esc="this.formattedPeriodContributions"/>
-                                </h3>
-                                <span class="badge bg-primary-subtle text-primary small">Selected Range</span>
+                                </h2>
+                                <div class="text-muted" style="font-size: 0.8rem;">Selected Range</div>
                             </div>
-                            <div class="bg-info-subtle text-info p-3 rounded-circle">
-                                <i class="fa fa-money fa-2x"></i>
+                            <div class="fs-1 text-warning opacity-50">
+                                <i class="fa fa-money"/>
                             </div>
                         </div>
                     </div>
