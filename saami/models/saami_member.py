@@ -94,6 +94,7 @@ class SaamiMember(models.Model):
         store=True,
         currency_field='currency_id',
     )
+    invoice_count = fields.Integer(string='Invoices Count', compute='_compute_invoice_count')
     currency_id = fields.Many2one(
         'res.currency',
         string='Currency',
@@ -135,6 +136,71 @@ class SaamiMember(models.Model):
     def _compute_total_contributions(self):
         for rec in self:
             rec.total_contributions = sum(rec.tracker_ids.mapped('actual_amount'))
+
+    def _compute_invoice_count(self):
+        Move = self.env['account.move']
+        for rec in self:
+            if rec.partner_id:
+                rec.invoice_count = Move.search_count([
+                    ('partner_id', '=', rec.partner_id.id),
+                    ('move_type', '=', 'out_invoice'),
+                ])
+            else:
+                rec.invoice_count = 0
+
+    def action_view_contributions(self):
+        self.ensure_one()
+        return {
+            'name': _('Contribution Trackers'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.contribution.tracker',
+            'view_mode': 'list,form',
+            'domain': [('member_id', '=', self.id)],
+            'context': {'default_member_id': self.id},
+            'target': 'current',
+        }
+
+    def action_view_invoices(self):
+        self.ensure_one()
+        return {
+            'name': _('Invoices'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'view_mode': 'list,form',
+            'domain': [('partner_id', '=', self.partner_id.id), ('move_type', '=', 'out_invoice')],
+            'context': {
+                'default_partner_id': self.partner_id.id,
+                'default_move_type': 'out_invoice',
+            },
+            'target': 'current',
+        }
+
+    def action_view_application(self):
+        self.ensure_one()
+        if not self.application_id:
+            return
+        return {
+            'name': _('Member Application'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.member.application',
+            'view_mode': 'form',
+            'res_id': self.application_id.id,
+            'target': 'current',
+        }
+
+    def action_view_user(self):
+        self.ensure_one()
+        if not self.user_id:
+            return
+        view = self.env.ref('base.view_users_form', raise_if_not_found=False)
+        return {
+            'name': _('User Account'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'res.users',
+            'views': [(view.id, 'form')] if view else [(False, 'form')],
+            'res_id': self.user_id.id,
+            'target': 'current',
+        }
 
     @api.model_create_multi
     def create(self, vals_list):
