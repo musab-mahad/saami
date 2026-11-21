@@ -11,7 +11,7 @@
                 <div>
                     <p>Hello <t t-out="object.full_name or object.first_name or 'there'"/>,</p>
                     <p>Thank you for applying to join the Saami Cooperative. We have successfully received your application (<strong>#<t t-out="object.name"/></strong>).</p>
-                    <p>To proceed with your application, please login and complete the one-time registration fee payment of $10.00 using mobile money.</p>
+                    <p>To proceed with your application, please login and complete the one-time registration fee payment of $<t t-out="f'{object.invoice_id.amount_total:,.2f}'"/> using mobile money.</p>
                     <p>Best regards,<br/><strong>The Saami Team</strong></p>
                 </div>
             </field>
