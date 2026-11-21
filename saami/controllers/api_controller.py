@@ -14,7 +14,8 @@ def get_saami_bot_env():
     bot = sudo_env.ref('saami.user_saami_bot', raise_if_not_found=False) or sudo_env.ref('base.user_root')
     company = bot.company_id or sudo_env['res.company'].search([], limit=1)
     request.update_env(user=bot.id, su=True)
-    return request.env.with_company(company)
+    request.update_context(allowed_company_ids=[company.id])
+    return request.env
 
 
 class SaamiApiController(http.Controller):
