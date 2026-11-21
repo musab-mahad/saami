@@ -16,5 +16,22 @@
                 </div>
             </field>
         </record>
+
+        <!-- 2. Application Payment Received & Under Review Template -->
+        <record id="mail_template_application_payment_received" model="mail.template">
+            <field name="name">Saami: Payment Received &amp; Under Review</field>
+            <field name="model_id" ref="saami.model_saami_member_application"/>
+            <field name="subject">Payment Received – Your Saami Application is Under Review (#{{ object.name }})</field>
+            <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
+            <field name="body_html" type="html">
+                <div>
+                    <p>Hello <t t-out="object.full_name or object.first_name or 'there'"/>,</p>
+                    <p>We have successfully received your registration fee payment of $<t t-out="f'{object.invoice_id.amount_total:,.2f}'"/> (Transaction: <strong><t t-out="object.transaction_ids[:1].name or object.invoice_id.name"/></strong>).</p>
+                    <p>Your application is now <strong>under review</strong> by our cooperative board. We will review your submitted information and notify you via email as soon as your membership is approved.</p>
+                    <p>You can check your application status at any time by logging into the Saami app.</p>
+                    <p>Best regards,<br/><strong>The Saami Team</strong></p>
+                </div>
+            </field>
+        </record>
     </data>
 </odoo>

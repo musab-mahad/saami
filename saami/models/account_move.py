@@ -25,6 +25,19 @@ class AccountMove(models.Model):
             if move.transaction_ids:
                 continue
             if move.state == 'posted' and move.payment_state in ('paid', 'in_payment'):
+                # 1. Update member applications if registration invoice was paid manually
+                apps = self.env['saami.member.application'].sudo().search([
+                    ('invoice_id', '=', move.id),
+                    ('state', '=', 'pending_payment'),
+                ])
+                for app in apps:
+                    if move.amount_residual <= 0:
+                        app.state = 'pending_approval'
+                        if hasattr(app, 'with_delay'):
+                            app.with_delay()._send_payment_received_email()
+                        else:
+                            app._send_payment_received_email()
+
                 trackers = Tracker.search([('invoice_ids', 'in', move.id)])
                 for trk in trackers:
                     existing_tx = Transaction.search([('invoice_id', '=', move.id), ('state', '=', 'paid')], limit=1)

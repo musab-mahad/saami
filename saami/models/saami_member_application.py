@@ -76,6 +76,11 @@ class SaamiMemberApplication(models.Model):
         string='Payment Status',
         readonly=True,
     )
+    email_payment_received_sent = fields.Boolean(
+        string='Payment Received Email Sent',
+        default=False,
+        copy=False,
+    )
 
     @api.depends('first_name', 'middle_name', 'last_name')
     def _compute_full_name(self):
@@ -164,6 +169,18 @@ class SaamiMemberApplication(models.Model):
         for rec in self:
             template.send_mail(rec.id, force_send=True)
 
+    def _send_payment_received_email(self):
+        """Send email confirming registration payment and under review (async via queue_job)."""
+        template = self.env.ref('saami.mail_template_application_payment_received', raise_if_not_found=False)
+        if not template:
+            return
+        for rec in self:
+            if rec.email_payment_received_sent:
+                continue
+            if rec.invoice_id and rec.invoice_id.payment_state in ('paid', 'in_payment') and rec.invoice_id.amount_residual <= 0:
+                template.send_mail(rec.id, force_send=True)
+                rec.email_payment_received_sent = True
+
     def action_create_registration_invoice(self):
         """Create registration fee invoice for the application."""
         AccountMove = self.env['account.move']
@@ -241,8 +258,12 @@ class SaamiMemberApplication(models.Model):
             if not rec.invoice_id:
                 raise UserError(_("No registration invoice found for this application."))
 
-            if rec.invoice_id.payment_state in ('paid', 'in_payment'):
+            if rec.invoice_id.payment_state in ('paid', 'in_payment') and rec.invoice_id.amount_residual <= 0:
                 rec.state = 'pending_approval'
+                if hasattr(rec, 'with_delay'):
+                    rec.with_delay()._send_payment_received_email()
+                else:
+                    rec._send_payment_received_email()
             else:
                 state_label = dict(rec.invoice_id._fields['payment_state'].selection).get(
                     rec.invoice_id.payment_state, rec.invoice_id.payment_state
