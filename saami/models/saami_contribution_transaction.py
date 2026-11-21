@@ -106,6 +106,11 @@ class SaamiContributionTransaction(models.Model):
         ('failed', 'Failed'),
         ('cancelled', 'Cancelled'),
     ], string='Status', default='draft', tracking=True)
+    email_sent = fields.Boolean(
+        string='Receipt Email Sent',
+        default=False,
+        copy=False,
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -114,6 +119,17 @@ class SaamiContributionTransaction(models.Model):
                 vals['name'] = self.env['ir.sequence'].next_by_code('saami.contribution.transaction') or _('New')
         return super().create(vals_list)
 
+    def _send_contribution_paid_email(self):
+        """Send email receipt for capital contribution (async via queue_job)."""
+        template = self.env.ref('saami.mail_template_contribution_received', raise_if_not_found=False)
+        if not template:
+            return
+        for rec in self:
+            if rec.email_sent or rec.state != 'paid' or not rec.member_id:
+                continue
+            template.send_mail(rec.id, force_send=True)
+            rec.email_sent = True
+
     def action_mark_paid(self):
         """Confirm payment and recompute linked tracker."""
         self.write({'state': 'paid'})
@@ -121,6 +137,10 @@ class SaamiContributionTransaction(models.Model):
             if rec.tracker_id:
                 rec.tracker_id._compute_actual_amount()
                 rec.tracker_id._compute_state()
+            if hasattr(rec, 'with_delay'):
+                rec.with_delay()._send_contribution_paid_email()
+            else:
+                rec._send_contribution_paid_email()
 
     def action_cancel(self):
         self.write({'state': 'cancelled'})

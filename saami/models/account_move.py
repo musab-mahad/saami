@@ -44,7 +44,7 @@ class AccountMove(models.Model):
                     if not existing_tx:
                         paid_amount = move.amount_total - move.amount_residual
                         if paid_amount > 0:
-                            Transaction.create({
+                            tx = Transaction.create({
                                 'member_id': trk.member_id.id,
                                 'partner_id': trk.member_id.partner_id.id,
                                 'tracker_id': trk.id,
@@ -57,6 +57,10 @@ class AccountMove(models.Model):
                                 'invoice_id': move.id,
                                 'state': 'paid',
                             })
+                            if hasattr(tx, 'with_delay'):
+                                tx.with_delay()._send_contribution_paid_email()
+                            else:
+                                tx._send_contribution_paid_email()
                             trk._compute_actual_amount()
                             trk._compute_state()
 

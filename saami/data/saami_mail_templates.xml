@@ -56,5 +56,28 @@
                 </div>
             </field>
         </record>
+
+        <!-- 4. Contribution Payment Received Template -->
+        <record id="mail_template_contribution_received" model="mail.template">
+            <field name="name">Saami: Capital Contribution Received</field>
+            <field name="model_id" ref="saami.model_saami_contribution_transaction"/>
+            <field name="subject">Capital Contribution Received – {{ object.currency_id.symbol or '$' }}{{ f'{object.amount:,.2f}' }} (#{{ object.name }})</field>
+            <field name="email_to">{{ object.member_id.email or object.partner_id.email or (object.member_id.user_id and object.member_id.user_id.login) }}</field>
+            <field name="body_html" type="html">
+                <div>
+                    <p>Hello <t t-out="object.member_id.full_name or object.partner_id.name or 'there'"/>,</p>
+                    <p>We have received your capital contribution payment. Thank you for your continued commitment!</p>
+                    <p><strong>Payment Summary:</strong></p>
+                    <ul>
+                        <li><strong>Amount:</strong> <t t-out="object.currency_id.symbol or '$'"/><t t-out="f'{object.amount:,.2f}'"/></li>
+                        <li><strong>Transaction Number:</strong> <t t-out="object.name"/></li>
+                        <li t-if="object.tracker_id"><strong>Period:</strong> <t t-out="object.tracker_id.month_name"/></li>
+                        <li><strong>Total Accumulated Contributions:</strong> <t t-out="object.currency_id.symbol or '$'"/><t t-out="f'{object.member_id.total_contributions:,.2f}'"/></li>
+                    </ul>
+                    <p>You can review your transaction history and tracker breakdown directly in the Saami app.</p>
+                    <p>Best regards,<br/><strong>The Saami Team</strong></p>
+                </div>
+            </field>
+        </record>
     </data>
 </odoo>

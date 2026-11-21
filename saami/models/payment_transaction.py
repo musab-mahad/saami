@@ -145,3 +145,9 @@ class PaymentTransaction(models.Model):
                 # Recompute tracker
                 tracker._compute_actual_amount()
                 tracker._compute_state()
+
+                # Send contribution receipt email (async via queue_job)
+                if hasattr(tx_record, 'with_delay'):
+                    tx_record.with_delay()._send_contribution_paid_email()
+                else:
+                    tx_record._send_contribution_paid_email()
