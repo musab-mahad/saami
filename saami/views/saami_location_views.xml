@@ -85,7 +85,7 @@
         <field name="res_model">res.country.state</field>
         <field name="view_mode">list,form</field>
         <field name="domain">[('country_id.code', '=', 'SO')]</field>
-        <field name="context">{'default_country_id': ref('base.so')}</field>
+        <field name="context" eval="{'default_country_id': ref('base.so')}"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Add a new region!
