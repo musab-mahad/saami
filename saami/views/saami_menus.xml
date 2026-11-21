@@ -26,6 +26,13 @@
               action="action_saami_member"
               sequence="20"/>
 
+    <!-- Contributions Tracker Menu -->
+    <menuitem id="menu_saami_contribution_tracker"
+              name="Contributions Tracker"
+              parent="menu_saami_membership"
+              action="action_saami_contribution_tracker"
+              sequence="30"/>
+
     <!-- Configuration Submenu -->
     <menuitem id="menu_saami_configuration"
               name="Configuration"

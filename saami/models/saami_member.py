@@ -77,9 +77,15 @@ class SaamiMember(models.Model):
         ('terminated', 'Terminated'),
     ], string='Status', default='active', tracking=True)
 
+    tracker_ids = fields.One2many(
+        'saami.contribution.tracker',
+        'member_id',
+        string='Contribution Trackers',
+    )
     total_contributions = fields.Monetary(
         string='Total Contributions',
         compute='_compute_total_contributions',
+        store=True,
         currency_field='currency_id',
     )
     currency_id = fields.Many2one(
@@ -119,10 +125,10 @@ class SaamiMember(models.Model):
             if rec.partner_id and rec.email:
                 rec.partner_id.email = rec.email
 
+    @api.depends('tracker_ids.actual_amount')
     def _compute_total_contributions(self):
         for rec in self:
-            # Placeholder until contribution model/ledger is hooked up
-            rec.total_contributions = 0.0
+            rec.total_contributions = sum(rec.tracker_ids.mapped('actual_amount'))
 
     @api.model_create_multi
     def create(self, vals_list):

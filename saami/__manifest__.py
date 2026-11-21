@@ -25,6 +25,7 @@ and capital contributions.
         'data/saami_product_data.xml',
         'wizards/saami_create_user_wizard_views.xml',
         'views/saami_product_views.xml',
+        'views/saami_contribution_tracker_views.xml',
         'views/saami_member_application_views.xml',
         'views/saami_member_views.xml',
         'views/saami_menus.xml',

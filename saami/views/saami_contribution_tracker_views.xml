@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List / Tree View -->
+    <record id="view_saami_contribution_tracker_tree" model="ir.ui.view">
+        <field name="name">saami.contribution.tracker.list</field>
+        <field name="model">saami.contribution.tracker</field>
+        <field name="arch" type="xml">
+            <list string="Contributions Tracker" default_order="date desc, member_id" decoration-success="state == 'paid'" decoration-info="state == 'excess'" decoration-warning="state == 'partial'" decoration-muted="state == 'unpaid'">
+                <field name="date" string="Period"/>
+                <field name="member_id"/>
+                <field name="expected_amount" widget="monetary" sum="Total Expected" width="150px"/>
+                <field name="actual_amount" widget="monetary" sum="Total Contributed" width="150px"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="state" widget="badge" decoration-success="state == 'paid'" decoration-info="state == 'excess'" decoration-warning="state == 'partial'" decoration-muted="state == 'unpaid'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_saami_contribution_tracker_form" model="ir.ui.view">
+        <field name="name">saami.contribution.tracker.form</field>
+        <field name="model">saami.contribution.tracker</field>
+        <field name="arch" type="xml">
+            <form string="Contribution Tracker">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="unpaid,partial,paid,excess"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="display_name" string="Tracker Period"/>
+                        <h1>
+                            <field name="display_name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Member &amp; Period">
+                            <field name="member_id"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="date"/>
+                            <field name="month_name" readonly="1"/>
+                        </group>
+                        <group string="Capital Contribution Breakdown">
+                            <field name="expected_amount" widget="monetary"/>
+                            <field name="actual_amount" widget="monetary" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Linked Invoices / Receipts" name="invoices">
+                            <field name="invoice_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="invoice_date"/>
+                                    <field name="amount_total" widget="monetary" sum="Total Invoiced"/>
+                                    <field name="amount_residual" widget="monetary" sum="Balance Due"/>
+                                    <field name="payment_state" widget="badge" decoration-success="payment_state in ('paid', 'in_payment')" decoration-warning="payment_state == 'partial'"/>
+                                    <field name="state" widget="badge" decoration-success="state == 'posted'"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View with default group by date:month -->
+    <record id="view_saami_contribution_tracker_search" model="ir.ui.view">
+        <field name="name">saami.contribution.tracker.search</field>
+        <field name="model">saami.contribution.tracker</field>
+        <field name="arch" type="xml">
+            <search string="Search Contributions Tracker">
+                <field name="member_id" string="Member"/>
+                <field name="partner_id" string="Partner"/>
+                <field name="month_name" string="Month"/>
+                <filter name="filter_paid" string="Fully Paid" domain="[('state', '=', 'paid')]"/>
+                <filter name="filter_excess" string="Paid Extra" domain="[('state', '=', 'excess')]"/>
+                <filter name="filter_partial" string="Partially Paid" domain="[('state', '=', 'partial')]"/>
+                <filter name="filter_unpaid" string="Unpaid" domain="[('state', '=', 'unpaid')]"/>
+                <separator/>
+                <group expand="1" string="Group By">
+                    <filter name="group_by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                    <filter name="group_by_member" string="Member" context="{'group_by': 'member_id'}"/>
+                    <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_saami_contribution_tracker" model="ir.actions.act_window">
+        <field name="name">Contributions Tracker</field>
+        <field name="res_model">saami.contribution.tracker</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_by_month': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No contribution records tracked yet!
+            </p>
+            <p>
+                Monthly capital contributions are tracked here by month, showing expected vs actual contributed amounts per member.
+            </p>
+        </field>
+    </record>
+</odoo>
