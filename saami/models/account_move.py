@@ -5,6 +5,21 @@ from odoo import models, api, _
 class AccountMove(models.Model):
     _inherit = 'account.move'
 
+    def action_post(self):
+        res = super(AccountMove, self).action_post()
+        Application = self.env['saami.member.application'].sudo()
+        for move in self:
+            apps = Application.search([
+                ('invoice_id', '=', move.id),
+                ('state', '=', 'draft')
+            ])
+            for app in apps:
+                if move.payment_state in ('paid', 'in_payment'):
+                    app.state = 'pending_approval'
+                else:
+                    app.state = 'pending_payment'
+        return res
+
     def button_draft(self):
         res = super(AccountMove, self).button_draft()
         self._reverse_saami_associations()

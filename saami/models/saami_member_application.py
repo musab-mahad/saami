@@ -137,6 +137,21 @@ class SaamiMemberApplication(models.Model):
                         rec.partner_id.write(partner_vals)
         return res
 
+    def action_submit(self):
+        """Submit draft application: ensure registration invoice is created and posted, then advance state."""
+        for rec in self:
+            if rec.state != 'draft':
+                continue
+            if not rec.invoice_id:
+                rec.action_create_registration_invoice()
+            else:
+                if rec.invoice_id.state == 'draft':
+                    rec.invoice_id.action_post()
+                if rec.invoice_id.payment_state in ('paid', 'in_payment'):
+                    rec.state = 'pending_approval'
+                else:
+                    rec.state = 'pending_payment'
+
     def action_create_registration_invoice(self):
         """Create registration fee invoice for the application."""
         AccountMove = self.env['account.move']

@@ -33,8 +33,8 @@ class SaamiDashboardController(http.Controller):
         # Card 1: Active Members
         total_active_members = Member.search_count([("state", "=", "active")])
 
-        # Card 2: Pending Applications
-        pending_applications = Application.search_count([("state", "in", ("pending_payment", "pending_approval"))])
+        # Card 2: Pending Applications (all uncompleted/active applications)
+        pending_applications = Application.search_count([("state", "not in", ("approved", "rejected", "cancelled"))])
 
         # Card 3: Total Capital Contributed (all-time active members)
         total_contributions = sum(Member.search([("state", "=", "active")]).mapped("total_contributions"))
