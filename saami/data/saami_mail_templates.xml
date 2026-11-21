@@ -33,5 +33,28 @@
                 </div>
             </field>
         </record>
+
+        <!-- 3. Application Approved Template -->
+        <record id="mail_template_application_approved" model="mail.template">
+            <field name="name">Saami: Application Approved</field>
+            <field name="model_id" ref="saami.model_saami_member_application"/>
+            <field name="subject">Congratulations! Your Saami Membership is Approved (#{{ object.member_id.name }})</field>
+            <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
+            <field name="body_html" type="html">
+                <div>
+                    <p>Hello <t t-out="object.full_name or object.first_name or 'there'"/>,</p>
+                    <p>Congratulations! Your application for membership has been reviewed and <strong>approved</strong>.</p>
+                    <p><strong>Your Official Member Details:</strong></p>
+                    <ul>
+                        <li><strong>Member Number:</strong> <t t-out="object.member_id.name"/></li>
+                        <li><strong>Full Name:</strong> <t t-out="object.full_name"/></li>
+                        <li><strong>Status:</strong> Active</li>
+                    </ul>
+                    <p>Your account is now fully active. You can log into the Saami app to view your profile and start making your monthly capital contributions.</p>
+                    <p>Welcome to our community!</p>
+                    <p>Best regards,<br/><strong>The Saami Team</strong></p>
+                </div>
+            </field>
+        </record>
     </data>
 </odoo>

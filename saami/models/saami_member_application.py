@@ -181,6 +181,15 @@ class SaamiMemberApplication(models.Model):
                 template.send_mail(rec.id, force_send=True)
                 rec.email_payment_received_sent = True
 
+    def _send_application_approved_email(self):
+        """Send congratulations and membership approval email (async via queue_job)."""
+        template = self.env.ref('saami.mail_template_application_approved', raise_if_not_found=False)
+        if not template:
+            return
+        for rec in self:
+            if rec.state == 'approved' and rec.member_id:
+                template.send_mail(rec.id, force_send=True)
+
     def action_create_registration_invoice(self):
         """Create registration fee invoice for the application."""
         AccountMove = self.env['account.move']
@@ -382,6 +391,11 @@ class SaamiMemberApplication(models.Model):
                     'member_id': member.id,
                     'partner_id': partner.id,
                 })
+
+            if hasattr(rec, 'with_delay'):
+                rec.with_delay()._send_application_approved_email()
+            else:
+                rec._send_application_approved_email()
 
     def action_reject(self):
         self.write({'state': 'rejected'})
