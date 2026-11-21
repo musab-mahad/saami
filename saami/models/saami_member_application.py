@@ -56,9 +56,9 @@ class SaamiMemberApplication(models.Model):
     kin2_address = fields.Char(string='Next of Kin 2 Address')
     kin2_mobile = fields.Char(string='Next of Kin 2 Mobile')
 
-    # KYC Attachments
-    photo = fields.Binary(string='Photo', attachment=True, required=True)
-    identity_file = fields.Binary(string='Identity Document', attachment=True, required=True)
+    # KYC Attachments (Optional)
+    photo = fields.Binary(string='Photo', attachment=True)
+    identity_file = fields.Binary(string='Identity Document', attachment=True)
 
     state = fields.Selection([
         ('draft', 'Draft'),
