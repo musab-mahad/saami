@@ -71,14 +71,14 @@ class PaymentTransaction(models.Model):
                 if app.invoice_id and app.invoice_id.payment_state in ('paid', 'in_payment') and app.invoice_id.amount_residual <= 0:
                     app.write({'state': 'pending_approval'})
                     if hasattr(app, 'with_delay'):
-                        app.with_delay()._send_payment_received_email()
+                        app.sudo().with_delay()._send_payment_received_email()
                     else:
-                        app._send_payment_received_email()
+                        app.sudo()._send_payment_received_email()
                 elif app.invoice_id and app.invoice_id.amount_residual > 0:
                     if hasattr(app, 'with_delay'):
-                        app.with_delay()._send_partial_payment_received_email()
+                        app.sudo().with_delay()._send_partial_payment_received_email()
                     else:
-                        app._send_partial_payment_received_email()
+                        app.sudo()._send_partial_payment_received_email()
 
             # Case 2: Monthly Capital Contribution
             elif tx.saami_tracker_id:

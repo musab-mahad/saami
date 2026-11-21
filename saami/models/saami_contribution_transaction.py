@@ -121,13 +121,14 @@ class SaamiContributionTransaction(models.Model):
 
     def _send_contribution_paid_email(self):
         """Send email receipt for capital contribution (async via queue_job)."""
+        self = self.sudo()
         template = self.env.ref('saami.mail_template_contribution_received', raise_if_not_found=False)
         if not template:
             return
-        for rec in self.sudo():
+        for rec in self:
             if rec.email_sent or rec.state != 'paid' or not rec.member_id:
                 continue
-            template.sudo().send_mail(rec.id, force_send=True)
+            template.send_mail(rec.id, force_send=True)
             rec.email_sent = True
 
     def action_mark_paid(self):
@@ -138,9 +139,9 @@ class SaamiContributionTransaction(models.Model):
                 rec.tracker_id._compute_actual_amount()
                 rec.tracker_id._compute_state()
             if hasattr(rec, 'with_delay'):
-                rec.with_delay()._send_contribution_paid_email()
+                rec.sudo().with_delay()._send_contribution_paid_email()
             else:
-                rec._send_contribution_paid_email()
+                rec.sudo()._send_contribution_paid_email()
 
     def action_cancel(self):
         self.write({'state': 'cancelled'})
