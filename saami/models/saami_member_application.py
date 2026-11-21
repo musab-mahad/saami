@@ -186,6 +186,15 @@ class SaamiMemberApplication(models.Model):
                 template.sudo().send_mail(rec.id, force_send=True)
                 rec.email_payment_received_sent = True
 
+    def _send_partial_payment_received_email(self):
+        """Send email acknowledging partial registration fee payment installment (async via queue_job)."""
+        template = self.env.ref('saami.mail_template_application_partial_payment_received', raise_if_not_found=False)
+        if not template:
+            return
+        for rec in self.sudo():
+            if rec.invoice_id and rec.invoice_id.amount_residual > 0:
+                template.sudo().send_mail(rec.id, force_send=True)
+
     def _send_application_approved_email(self):
         """Send congratulations and membership approval email (async via queue_job)."""
         template = self.env.ref('saami.mail_template_application_approved', raise_if_not_found=False)

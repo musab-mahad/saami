@@ -38,6 +38,30 @@
             </field>
         </record>
 
+        <!-- 2b. Application Partial Payment Received Template -->
+        <record id="mail_template_application_partial_payment_received" model="mail.template">
+            <field name="name">Saami: Registration Installment Payment Received</field>
+            <field name="model_id" ref="saami.model_saami_member_application"/>
+            <field name="subject">Payment Received – Registration Fee Installment (#{{ object.name }})</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
+            <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
+            <field name="body_html" type="html">
+                <div>
+                    <p>Hello <t t-out="object.full_name or object.first_name or 'there'"/>,</p>
+                    <p>We have successfully received an installment payment towards your registration fee for application <strong>#<t t-out="object.name"/></strong> (Invoice: <strong><t t-out="object.invoice_id.name or ''"/></strong>).</p>
+                    <p><strong>Payment Summary:</strong></p>
+                    <ul>
+                        <li><strong>Total Registration Fee:</strong> $<t t-out="f'{object.invoice_id.amount_total:,.2f}'"/></li>
+                        <li><strong>Total Paid So Far:</strong> $<t t-out="f'{(object.invoice_id.amount_total - object.invoice_id.amount_residual):,.2f}'"/></li>
+                        <li><strong>Remaining Balance Due:</strong> $<t t-out="f'{object.invoice_id.amount_residual:,.2f}'"/></li>
+                    </ul>
+                    <p>Please complete the remaining balance of $<t t-out="f'{object.invoice_id.amount_residual:,.2f}'"/> to submit your application for board review.</p>
+                    <p>Best regards,<br/><strong>The Saami Team</strong></p>
+                </div>
+            </field>
+        </record>
+
         <!-- 3. Application Approved Template -->
         <record id="mail_template_application_approved" model="mail.template">
             <field name="name">Saami: Application Approved</field>
