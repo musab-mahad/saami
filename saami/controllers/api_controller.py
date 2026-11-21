@@ -21,8 +21,35 @@ def get_saami_bot_env():
 class SaamiApiController(http.Controller):
 
     # -------------------------------------------------------------------------
-    # 0. METADATA: SOMALI REGIONS & DISTRICTS
+    # 0. METADATA: COUNTRIES, SOMALI REGIONS & DISTRICTS
     # -------------------------------------------------------------------------
+    @http.route('/api/saami/countries', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_countries(self):
+        """
+        Public endpoint returning countries for frontend selection.
+        """
+        preflight = handle_cors(['GET', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        try:
+            countries = request.env['res.country'].sudo().search([], order='name asc')
+            country_list = [{
+                'id': c.id,
+                'name': c.name,
+                'code': c.code,
+                'phone_code': c.phone_code,
+            } for c in countries]
+
+            return send_json({
+                'code': 'SUCCESS',
+                'count': len(country_list),
+                'countries': country_list,
+            })
+        except Exception as e:
+            _logger.error("Countries error: %s", str(e))
+            return send_json({'code': 'SERVER_ERROR', 'message': str(e)}, status=500)
+
     @http.route('/api/saami/locations', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
     def get_locations(self):
         """
@@ -33,6 +60,9 @@ class SaamiApiController(http.Controller):
             return preflight
 
         try:
+            Country = request.env['res.country'].sudo()
+            somalia = Country.search([('code', '=', 'SO')], limit=1)
+
             State = request.env['res.country.state'].sudo()
             somalia_states = State.search([('country_id.code', '=', 'SO')], order='name asc')
 
@@ -58,6 +88,12 @@ class SaamiApiController(http.Controller):
 
             return send_json({
                 'code': 'SUCCESS',
+                'country': {
+                    'id': somalia.id if somalia else False,
+                    'name': somalia.name if somalia else 'Somalia',
+                    'code': somalia.code if somalia else 'SO',
+                    'phone_code': somalia.phone_code if somalia else 252,
+                },
                 'regions': regions_data,
             })
         except Exception as e:
