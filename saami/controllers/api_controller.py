@@ -9,10 +9,12 @@ _logger = logging.getLogger(__name__)
 
 
 def get_saami_bot_env():
-    """ Return request environment bound to Saami Bot (or OdooBot) for public actions. """
-    bot = request.env.ref('saami.user_saami_bot', raise_if_not_found=False) or request.env.ref('base.user_root')
-    company = bot.company_id or request.env['res.company'].sudo().search([], limit=1)
-    return request.env(user=bot.id, su=True).with_company(company)
+    """ Initialize and return request environment bound to Saami Bot (or root). """
+    sudo_env = request.env(su=True)
+    bot = sudo_env.ref('saami.user_saami_bot', raise_if_not_found=False) or sudo_env.ref('base.user_root')
+    company = bot.company_id or sudo_env['res.company'].search([], limit=1)
+    request.update_env(user=bot.id, su=True)
+    return request.env.with_company(company)
 
 
 class SaamiApiController(http.Controller):
