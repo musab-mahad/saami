@@ -533,10 +533,10 @@ class SaamiAuthController(http.Controller):
                 'message': 'Both current_password and new_password are required.',
             }, status=400)
 
-        if len(new_password) < 8:
+        if len(new_password) < 4:
             return send_json({
                 'code': 'WEAK_PASSWORD',
-                'message': 'New password must be at least 8 characters long.',
+                'message': 'New password must be at least 4 characters long.',
             }, status=400)
 
         # Verify current password
