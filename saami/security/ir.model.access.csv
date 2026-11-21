@@ -1,8 +1,12 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_saami_member_application_user,saami.member.application.user,model_saami_member_application,base.group_user,1,1,1,1
+access_saami_member_application_portal,saami.member.application.portal,model_saami_member_application,base.group_portal,1,0,0,0
 access_saami_member_user,saami.member.user,model_saami_member,base.group_user,1,1,1,1
+access_saami_member_portal,saami.member.portal,model_saami_member,base.group_portal,1,0,0,0
 access_saami_product_user,saami.product.user,model_saami_product,base.group_user,1,1,1,1
 access_saami_district_user,saami.district.user,model_saami_district,base.group_user,1,1,1,1
 access_saami_contribution_tracker_user,saami.contribution.tracker.user,model_saami_contribution_tracker,base.group_user,1,1,1,1
+access_saami_contribution_tracker_portal,saami.contribution.tracker.portal,model_saami_contribution_tracker,base.group_portal,1,0,0,0
 access_saami_contribution_transaction_user,saami.contribution.transaction.user,model_saami_contribution_transaction,base.group_user,1,1,1,1
+access_saami_contribution_transaction_portal,saami.contribution.transaction.portal,model_saami_contribution_transaction,base.group_portal,1,0,0,0
 access_saami_create_user_wizard_user,saami.create.user.wizard.user,model_saami_create_user_wizard,base.group_user,1,1,1,1

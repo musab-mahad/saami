@@ -32,7 +32,7 @@ def _parse_image_base64(raw_image):
 
 def _build_profile_response(user):
     base_url = request.httprequest.url_root.rstrip('/') or request.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/')
-    user_image_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=image_1920" if user.partner_id.image_1920 else None
+    user_image_url = f"{base_url}/api/saami/user/{user.partner_id.id}/avatar" if user.partner_id.image_1920 else None
 
     Application = request.env['saami.member.application'].sudo()
     Member = request.env['saami.member'].sudo()
@@ -45,10 +45,8 @@ def _build_profile_response(user):
 
     if member:
         status = member.state
-        if member.photo:
-            photo_url = f"{base_url}/web/image?model=saami.member&id={member.id}&field=photo"
-        elif member.partner_id.image_1920:
-            photo_url = f"{base_url}/web/image?model=res.partner&id={member.partner_id.id}&field=image_1920"
+        if member.photo or member.partner_id.image_1920:
+            photo_url = f"{base_url}/api/saami/member/{member.id}/photo"
         else:
             photo_url = None
 
@@ -94,10 +92,8 @@ def _build_profile_response(user):
     elif application:
         status = application.state
         inv = application.invoice_id
-        if application.photo:
-            photo_url = f"{base_url}/web/image?model=saami.member.application&id={application.id}&field=photo"
-        elif user.partner_id.image_1920:
-            photo_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=image_1920"
+        if application.photo or user.partner_id.image_1920:
+            photo_url = f"{base_url}/api/saami/application/{application.id}/photo"
         else:
             photo_url = None
 
@@ -333,7 +329,7 @@ class SaamiAuthController(http.Controller):
         token = generate_jwt(user, extra_payload=extra_payload)
 
         base_url = request.httprequest.url_root.rstrip('/') or request.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/')
-        user_image_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=image_1920" if user.partner_id.image_1920 else None
+        user_image_url = f"{base_url}/api/saami/user/{user.partner_id.id}/avatar" if user.partner_id.image_1920 else None
 
         user_data = {
             'id': user.id,
@@ -569,3 +565,54 @@ class SaamiAuthController(http.Controller):
             'code': 'SUCCESS',
             'message': 'Password has been changed successfully.',
         }, status=200)
+
+    # -------------------------------------------------------------------------
+    # PUBLIC AVATAR / PHOTO STREAMING ENDPOINTS (TAAKULO PATTERN)
+    # -------------------------------------------------------------------------
+    @http.route('/api/saami/user/<int:partner_id>/avatar', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_user_avatar(self, partner_id, **kwargs):
+        preflight = handle_cors(['GET', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        partner = request.env['res.partner'].sudo().search([('id', '=', partner_id)], limit=1)
+        if not partner or not partner.image_1920:
+            return request.not_found()
+
+        return request.env['ir.binary']._get_image_stream_from(
+            partner.sudo(), 'image_1920'
+        ).get_response()
+
+    @http.route('/api/saami/member/<int:member_id>/photo', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_member_photo(self, member_id, **kwargs):
+        preflight = handle_cors(['GET', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        member = request.env['saami.member'].sudo().search([('id', '=', member_id)], limit=1)
+        if not member:
+            return request.not_found()
+
+        if member.photo:
+            return request.env['ir.binary']._get_image_stream_from(member.sudo(), 'photo').get_response()
+        elif member.partner_id and member.partner_id.image_1920:
+            return request.env['ir.binary']._get_image_stream_from(member.partner_id.sudo(), 'image_1920').get_response()
+
+        return request.not_found()
+
+    @http.route('/api/saami/application/<int:app_id>/photo', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_application_photo(self, app_id, **kwargs):
+        preflight = handle_cors(['GET', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        app = request.env['saami.member.application'].sudo().search([('id', '=', app_id)], limit=1)
+        if not app:
+            return request.not_found()
+
+        if app.photo:
+            return request.env['ir.binary']._get_image_stream_from(app.sudo(), 'photo').get_response()
+        elif app.partner_id and app.partner_id.image_1920:
+            return request.env['ir.binary']._get_image_stream_from(app.partner_id.sudo(), 'image_1920').get_response()
+
+        return request.not_found()
