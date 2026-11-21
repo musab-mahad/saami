@@ -79,5 +79,22 @@
                 </div>
             </field>
         </record>
+
+        <!-- 5. Application Rejected Template -->
+        <record id="mail_template_application_rejected" model="mail.template">
+            <field name="name">Saami: Application Rejected</field>
+            <field name="model_id" ref="saami.model_saami_member_application"/>
+            <field name="subject">Update Regarding Your Saami Membership Application (#{{ object.name }})</field>
+            <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
+            <field name="body_html" type="html">
+                <div>
+                    <p>Hello <t t-out="object.full_name or object.first_name or 'there'"/>,</p>
+                    <p>Thank you for your interest in joining the Saami Cooperative.</p>
+                    <p>After reviewing your application (<strong>#<t t-out="object.name"/></strong>), we were unable to approve your membership at this time.</p>
+                    <p>If you have any questions or would like further information, please reach out to our support team.</p>
+                    <p>Best regards,<br/><strong>The Saami Team</strong></p>
+                </div>
+            </field>
+        </record>
     </data>
 </odoo>
