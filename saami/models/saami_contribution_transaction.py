@@ -22,13 +22,31 @@ class SaamiContributionTransaction(models.Model):
         index=True,
         tracking=True,
     )
+    application_id = fields.Many2one(
+        'saami.member.application',
+        string='Application',
+        ondelete='set null',
+        index=True,
+        tracking=True,
+    )
     partner_id = fields.Many2one(
         'res.partner',
         string='Partner',
-        related='member_id.partner_id',
+        compute='_compute_partner_id',
         store=True,
+        readonly=False,
         index=True,
     )
+
+    @api.depends('member_id.partner_id', 'application_id.partner_id')
+    def _compute_partner_id(self):
+        for tx in self:
+            if tx.member_id and tx.member_id.partner_id:
+                tx.partner_id = tx.member_id.partner_id
+            elif tx.application_id and tx.application_id.partner_id:
+                tx.partner_id = tx.application_id.partner_id
+            elif not tx.partner_id:
+                tx.partner_id = False
     tracker_id = fields.Many2one(
         'saami.contribution.tracker',
         string='Contributions Tracker',

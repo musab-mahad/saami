@@ -340,6 +340,16 @@ class SaamiMemberApplication(models.Model):
             rec.member_id = member.id
             rec.state = 'approved'
 
+            # Link existing transactions for this application to the new member and partner
+            txs = self.env['saami.contribution.transaction'].sudo().search([
+                ('application_id', '=', rec.id),
+            ])
+            if txs:
+                txs.write({
+                    'member_id': member.id,
+                    'partner_id': partner.id,
+                })
+
     def action_reject(self):
         self.write({'state': 'rejected'})
 

@@ -313,7 +313,12 @@ class SaamiApiController(http.Controller):
         member = request.env['saami.member'].sudo().search([('partner_id', '=', user.partner_id.id)], limit=1)
         Tx = request.env['saami.contribution.transaction'].sudo()
 
-        domain = ['|', ('partner_id', '=', user.partner_id.id), ('member_id', '=', member.id if member else False)]
+        domain = [
+            '|', '|',
+            ('partner_id', '=', user.partner_id.id),
+            ('member_id', '=', member.id if member else False),
+            ('application_id.partner_id', '=', user.partner_id.id),
+        ]
         transactions = Tx.search(domain, order='date desc, id desc')
 
         tx_list = []

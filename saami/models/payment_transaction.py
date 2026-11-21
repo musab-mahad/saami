@@ -42,6 +42,8 @@ class PaymentTransaction(models.Model):
                 # Create a transaction record for auditing/receipt
                 member = app.member_id or False
                 self.env['saami.contribution.transaction'].sudo().create({
+                    'application_id': app.id,
+                    'partner_id': app.partner_id.id if app.partner_id else False,
                     'member_id': member.id if member else False,
                     'transaction_type': 'registration_fee',
                     'date': fields.Date.context_today(tx),

@@ -9,6 +9,8 @@
                 <field name="name"/>
                 <field name="date"/>
                 <field name="member_id"/>
+                <field name="partner_id" optional="show"/>
+                <field name="application_id" optional="hide"/>
                 <field name="transaction_type" widget="badge"/>
                 <field name="payment_method"/>
                 <field name="external_reference"/>
@@ -40,6 +42,7 @@
                     <group>
                         <group string="Transaction Information">
                             <field name="member_id" readonly="state == 'paid'"/>
+                            <field name="application_id" readonly="state == 'paid'"/>
                             <field name="partner_id" readonly="1"/>
                             <field name="transaction_type" readonly="state == 'paid'"/>
                             <field name="tracker_id" readonly="state == 'paid'"/>
