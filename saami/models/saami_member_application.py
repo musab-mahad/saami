@@ -71,6 +71,11 @@ class SaamiMemberApplication(models.Model):
 
     member_id = fields.Many2one('saami.member', string='Member Record', readonly=True, copy=False)
     invoice_id = fields.Many2one('account.move', string='Registration Invoice', readonly=True, copy=False)
+    invoice_payment_state = fields.Selection(
+        related='invoice_id.payment_state',
+        string='Payment Status',
+        readonly=True,
+    )
 
     @api.depends('first_name', 'middle_name', 'last_name')
     def _compute_full_name(self):
@@ -183,10 +188,85 @@ class SaamiMemberApplication(models.Model):
             }
         }
 
-    def action_submit_payment(self):
-        """Called once payment for registration fee is initiated / awaiting confirmation."""
+    def action_register_payment(self):
+        """Open the payment register wizard for the registration invoice."""
+        self.ensure_one()
+        if not self.invoice_id:
+            raise UserError(_("No registration invoice found for this application."))
+        if self.invoice_id.payment_state in ('paid', 'in_payment'):
+            raise UserError(_("The registration invoice is already paid."))
+
+        return {
+            'name': _('Register Payment'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.payment.register',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'active_model': 'account.move',
+                'active_ids': [self.invoice_id.id],
+            },
+        }
+
+    def action_check_payment(self):
+        """Check if the registration invoice is paid and advance status to pending_approval."""
         for rec in self:
-            rec.state = 'pending_approval'
+            if not rec.invoice_id:
+                raise UserError(_("No registration invoice found for this application."))
+
+            if rec.invoice_id.payment_state in ('paid', 'in_payment'):
+                rec.state = 'pending_approval'
+            else:
+                state_label = dict(rec.invoice_id._fields['payment_state'].selection).get(
+                    rec.invoice_id.payment_state, rec.invoice_id.payment_state
+                )
+                raise UserError(_(
+                    "The registration invoice (%s) is not yet paid (Status: %s, Due: %s %s)."
+                ) % (
+                    rec.invoice_id.name or '',
+                    state_label,
+                    rec.invoice_id.amount_residual,
+                    rec.invoice_id.currency_id.symbol or rec.invoice_id.currency_id.name or '',
+                ))
+
+    def action_view_invoice(self):
+        self.ensure_one()
+        if not self.invoice_id:
+            return
+        return {
+            'name': _('Registration Invoice'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'view_mode': 'form',
+            'res_id': self.invoice_id.id,
+            'target': 'current',
+        }
+
+    def action_view_user(self):
+        self.ensure_one()
+        if not self.user_id:
+            return
+        return {
+            'name': _('Portal User'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'res.users',
+            'view_mode': 'form',
+            'res_id': self.user_id.id,
+            'target': 'current',
+        }
+
+    def action_view_member(self):
+        self.ensure_one()
+        if not self.member_id:
+            return
+        return {
+            'name': _('Member Record'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.member',
+            'view_mode': 'form',
+            'res_id': self.member_id.id,
+            'target': 'current',
+        }
 
     def action_approve(self):
         """Approve the application and create the saami.member record."""
@@ -195,6 +275,8 @@ class SaamiMemberApplication(models.Model):
         for rec in self:
             if rec.state == 'approved':
                 continue
+            if rec.state != 'pending_approval':
+                raise UserError(_("Application must be in 'Pending Approval' state before approving."))
 
             partner = rec.partner_id
             if not partner:
