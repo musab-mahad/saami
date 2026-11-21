@@ -171,19 +171,19 @@ class SaamiMemberApplication(models.Model):
         template = self.env.ref('saami.mail_template_application_received', raise_if_not_found=False)
         if not template:
             return
-        for rec in self:
-            template.send_mail(rec.id, force_send=True)
+        for rec in self.sudo():
+            template.sudo().send_mail(rec.id, force_send=True)
 
     def _send_payment_received_email(self):
         """Send email confirming registration payment and under review (async via queue_job)."""
         template = self.env.ref('saami.mail_template_application_payment_received', raise_if_not_found=False)
         if not template:
             return
-        for rec in self:
+        for rec in self.sudo():
             if rec.email_payment_received_sent:
                 continue
             if rec.invoice_id and rec.invoice_id.payment_state in ('paid', 'in_payment') and rec.invoice_id.amount_residual <= 0:
-                template.send_mail(rec.id, force_send=True)
+                template.sudo().send_mail(rec.id, force_send=True)
                 rec.email_payment_received_sent = True
 
     def _send_application_approved_email(self):
@@ -191,18 +191,18 @@ class SaamiMemberApplication(models.Model):
         template = self.env.ref('saami.mail_template_application_approved', raise_if_not_found=False)
         if not template:
             return
-        for rec in self:
+        for rec in self.sudo():
             if rec.state == 'approved' and rec.member_id:
-                template.send_mail(rec.id, force_send=True)
+                template.sudo().send_mail(rec.id, force_send=True)
 
     def _send_application_rejected_email(self):
         """Send application rejection notice (async via queue_job)."""
         template = self.env.ref('saami.mail_template_application_rejected', raise_if_not_found=False)
         if not template:
             return
-        for rec in self:
+        for rec in self.sudo():
             if rec.state == 'rejected':
-                template.send_mail(rec.id, force_send=True)
+                template.sudo().send_mail(rec.id, force_send=True)
 
     def action_create_registration_invoice(self):
         """Create registration fee invoice for the application."""

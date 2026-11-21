@@ -124,10 +124,10 @@ class SaamiContributionTransaction(models.Model):
         template = self.env.ref('saami.mail_template_contribution_received', raise_if_not_found=False)
         if not template:
             return
-        for rec in self:
+        for rec in self.sudo():
             if rec.email_sent or rec.state != 'paid' or not rec.member_id:
                 continue
-            template.send_mail(rec.id, force_send=True)
+            template.sudo().send_mail(rec.id, force_send=True)
             rec.email_sent = True
 
     def action_mark_paid(self):

@@ -6,6 +6,8 @@
             <field name="name">Saami: Application Received</field>
             <field name="model_id" ref="saami.model_saami_member_application"/>
             <field name="subject">Welcome to Saami – Membership Application Received (#{{ object.name }})</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
             <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
             <field name="body_html" type="html">
                 <div>
@@ -22,6 +24,8 @@
             <field name="name">Saami: Payment Received &amp; Under Review</field>
             <field name="model_id" ref="saami.model_saami_member_application"/>
             <field name="subject">Payment Received – Your Saami Application is Under Review (#{{ object.name }})</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
             <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
             <field name="body_html" type="html">
                 <div>
@@ -39,6 +43,8 @@
             <field name="name">Saami: Application Approved</field>
             <field name="model_id" ref="saami.model_saami_member_application"/>
             <field name="subject">Congratulations! Your Saami Membership is Approved (#{{ object.member_id.name }})</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
             <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
             <field name="body_html" type="html">
                 <div>
@@ -62,6 +68,8 @@
             <field name="name">Saami: Capital Contribution Received</field>
             <field name="model_id" ref="saami.model_saami_contribution_transaction"/>
             <field name="subject">Capital Contribution Received – {{ object.currency_id.symbol or '$' }}{{ f'{object.amount:,.2f}' }} (#{{ object.name }})</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
             <field name="email_to">{{ object.member_id.email or object.partner_id.email or (object.member_id.user_id and object.member_id.user_id.login) }}</field>
             <field name="body_html" type="html">
                 <div>
@@ -85,6 +93,8 @@
             <field name="name">Saami: Application Rejected</field>
             <field name="model_id" ref="saami.model_saami_member_application"/>
             <field name="subject">Update Regarding Your Saami Membership Application (#{{ object.name }})</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
             <field name="email_to">{{ object.email or object.partner_id.email or (object.user_id and object.user_id.login) }}</field>
             <field name="body_html" type="html">
                 <div>
