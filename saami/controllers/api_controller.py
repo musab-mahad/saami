@@ -160,6 +160,7 @@ class SaamiApiController(http.Controller):
                         'groups_id': [(6, 0, [portal_group.id])],
                     })
                 existing_app.user_id = user.id
+                existing_app.partner_id = user.partner_id.id
 
                 # Cancel previous unpaid invoice and detach to force a fresh invoice
                 if existing_app.invoice_id:
@@ -297,7 +298,9 @@ class SaamiApiController(http.Controller):
         if not phone:
             return send_json({'code': 'VALIDATION_ERROR', 'message': 'Mobile phone number is required for USSD payment.'}, status=400)
 
-        app = request.env['saami.member.application'].sudo().search([('partner_id', '=', user.partner_id.id)], limit=1)
+        app = request.env['saami.member.application'].sudo().search([
+            '|', ('user_id', '=', user.id), ('partner_id', '=', user.partner_id.id)
+        ], limit=1)
         if not app:
             return send_json({'code': 'NOT_FOUND', 'message': 'No application found for this account.'}, status=404)
 
