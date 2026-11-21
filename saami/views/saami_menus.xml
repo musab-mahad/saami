@@ -26,19 +26,25 @@
               action="action_saami_member"
               sequence="20"/>
 
-    <!-- Contributions Tracker Menu -->
+    <!-- Contributions Submenu -->
+    <menuitem id="menu_saami_contributions"
+              name="Contributions"
+              parent="menu_saami_root"
+              sequence="20"/>
+
+    <!-- Contributions Tracker Menu (under Contributions) -->
     <menuitem id="menu_saami_contribution_tracker"
               name="Contributions Tracker"
-              parent="menu_saami_membership"
+              parent="menu_saami_contributions"
               action="action_saami_contribution_tracker"
-              sequence="30"/>
+              sequence="10"/>
 
-    <!-- Transactions Menu -->
+    <!-- Transactions Menu (under Contributions) -->
     <menuitem id="menu_saami_contribution_transaction"
               name="Transactions"
-              parent="menu_saami_membership"
+              parent="menu_saami_contributions"
               action="action_saami_contribution_transaction"
-              sequence="40"/>
+              sequence="20"/>
 
     <!-- Configuration Submenu -->
     <menuitem id="menu_saami_configuration"

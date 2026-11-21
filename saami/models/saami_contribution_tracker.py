@@ -111,6 +111,11 @@ class SaamiContributionTracker(models.Model):
                 rec.state = 'excess'
 
     @api.model
+    def _cron_generate_monthly_trackers(self):
+        """Cron entry point for generating monthly contribution trackers."""
+        return self.generate_monthly_trackers()
+
+    @api.model
     def generate_monthly_trackers(self, target_date=None):
         """
         Cron / Action method: Generates monthly tracker entries for all active members.

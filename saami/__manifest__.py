@@ -23,6 +23,7 @@ and capital contributions.
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
         'data/saami_product_data.xml',
+        'data/saami_cron.xml',
         'wizards/saami_create_user_wizard_views.xml',
         'views/saami_product_views.xml',
         'views/saami_contribution_transaction_views.xml',

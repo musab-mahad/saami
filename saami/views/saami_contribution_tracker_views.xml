@@ -5,7 +5,7 @@
         <field name="name">saami.contribution.tracker.list</field>
         <field name="model">saami.contribution.tracker</field>
         <field name="arch" type="xml">
-            <list string="Contributions Tracker" default_order="date desc, member_id" decoration-success="state == 'paid'" decoration-info="state == 'excess'" decoration-warning="state == 'partial'" decoration-muted="state == 'unpaid'">
+            <list string="Contributions Tracker" default_order="date desc, member_id" create="false" decoration-success="state == 'paid'" decoration-info="state == 'excess'" decoration-warning="state == 'partial'" decoration-muted="state == 'unpaid'">
                 <field name="date" string="Period"/>
                 <field name="member_id"/>
                 <field name="expected_amount" widget="monetary" sum="Total Expected" width="150px"/>
@@ -21,7 +21,7 @@
         <field name="name">saami.contribution.tracker.form</field>
         <field name="model">saami.contribution.tracker</field>
         <field name="arch" type="xml">
-            <form string="Contribution Tracker">
+            <form string="Contribution Tracker" create="false">
                 <header>
                     <field name="state" widget="statusbar" statusbar_visible="unpaid,partial,paid,excess"/>
                 </header>
