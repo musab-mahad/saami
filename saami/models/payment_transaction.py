@@ -52,6 +52,20 @@ class PaymentTransaction(models.Model):
                     'invoice_id': app.invoice_id.id if app.invoice_id else False,
                     'state': 'paid',
                 })
+                # Auto-register payment to mark the registration invoice as paid/reconciled
+                if app.invoice_id and app.invoice_id.payment_state in ('not_paid', 'partial'):
+                    try:
+                        payment_register = self.env['account.payment.register'].sudo().with_context(
+                            active_model='account.move',
+                            active_ids=app.invoice_id.ids,
+                        ).create({
+                            'amount': tx.amount,
+                            'payment_date': fields.Date.context_today(tx),
+                        })
+                        payment_register._create_payments()
+                    except Exception as e:
+                        _logger.warning("Could not auto-register payment for registration invoice %s: %s", app.invoice_id.name, e)
+
                 app.write({'state': 'pending_approval'})
 
             # Case 2: Monthly Capital Contribution

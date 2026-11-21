@@ -149,6 +149,7 @@ class SaamiApiController(http.Controller):
             'partner_id': user.partner_id.id,
             'saami_application_id': app.id,
             'saami_payment_purpose': 'registration_fee',
+            'invoice_ids': [(4, invoice.id)],
             'operation': 'offline',
         })
 
