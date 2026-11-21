@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Root Menu for WaafiPay Simulator -->
+    <menuitem id="menu_waafipay_simulator_root"
+              name="WaafiPay Simulator"
+              sequence="90"
+              web_icon="payment_waafipay,static/description/icon.png"/>
+
+    <menuitem id="menu_waafipay_test_wallets"
+              name="Simulated Wallets"
+              parent="menu_waafipay_simulator_root"
+              action="action_waafipay_test_wallet"
+              sequence="10"/>
+
+    <menuitem id="menu_waafipay_simulator_requests"
+              name="USSD Request Logs"
+              parent="menu_waafipay_simulator_root"
+              action="action_waafipay_simulator_request"
+              sequence="20"/>
+
+</odoo>

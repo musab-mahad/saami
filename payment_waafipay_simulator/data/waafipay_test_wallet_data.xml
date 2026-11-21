@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Default EVCPlus Test Wallet -->
+        <record id="wallet_evcplus_default" model="waafipay.test.wallet">
+            <field name="phone">252611111111</field>
+            <field name="holder_name">Hormuud EVCPlus Test User</field>
+            <field name="provider_type">evcplus</field>
+            <field name="pin">1212</field>
+            <field name="balance">500.00</field>
+            <field name="state">active</field>
+            <field name="behavior">approve</field>
+        </record>
+
+        <!-- Default ZAAD Test Wallet -->
+        <record id="wallet_zaad_default" model="waafipay.test.wallet">
+            <field name="phone">252631111111</field>
+            <field name="holder_name">Telesom ZAAD Test User</field>
+            <field name="provider_type">zaad</field>
+            <field name="pin">1212</field>
+            <field name="balance">500.00</field>
+            <field name="state">active</field>
+            <field name="behavior">approve</field>
+        </record>
+
+        <!-- Default SAHAL Test Wallet -->
+        <record id="wallet_sahal_default" model="waafipay.test.wallet">
+            <field name="phone">252901111111</field>
+            <field name="holder_name">Golis SAHAL Test User</field>
+            <field name="provider_type">sahal</field>
+            <field name="pin">1212</field>
+            <field name="balance">500.00</field>
+            <field name="state">active</field>
+            <field name="behavior">approve</field>
+        </record>
+
+        <!-- Negative Test: Insufficient Funds Wallet -->
+        <record id="wallet_insufficient_funds" model="waafipay.test.wallet">
+            <field name="phone">252610000000</field>
+            <field name="holder_name">Zero Balance Wallet</field>
+            <field name="provider_type">evcplus</field>
+            <field name="pin">1212</field>
+            <field name="balance">0.00</field>
+            <field name="state">active</field>
+            <field name="behavior">insufficient</field>
+        </record>
+
+        <!-- Negative Test: User Rejection Wallet -->
+        <record id="wallet_rejection_test" model="waafipay.test.wallet">
+            <field name="phone">252610000001</field>
+            <field name="holder_name">User Rejection Test</field>
+            <field name="provider_type">evcplus</field>
+            <field name="pin">1212</field>
+            <field name="balance">100.00</field>
+            <field name="state">active</field>
+            <field name="behavior">reject</field>
+        </record>
+    </data>
+</odoo>

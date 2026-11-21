@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_waafipay_test_wallet_user,waafipay.test.wallet.user,model_waafipay_test_wallet,base.group_user,1,1,1,1
+access_waafipay_simulator_request_user,waafipay.simulator.request.user,model_waafipay_simulator_request,base.group_user,1,1,1,1

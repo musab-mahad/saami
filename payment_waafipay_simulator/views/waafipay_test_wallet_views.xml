@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Test Wallet Form View -->
+    <record id="view_waafipay_test_wallet_form" model="ir.ui.view">
+        <field name="name">waafipay.test.wallet.form</field>
+        <field name="model">waafipay.test.wallet</field>
+        <field name="arch" type="xml">
+            <form string="Simulated Mobile Wallet">
+                <header>
+                    <button name="action_topup_balance" string="+ Add $100 Balance" type="object" class="btn-secondary"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,blocked"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="phone" string="Phone Number"/>
+                        <h1>
+                            <field name="phone" placeholder="e.g. 252611111111"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group name="wallet_details" string="Wallet Information">
+                            <field name="holder_name"/>
+                            <field name="provider_type"/>
+                            <field name="pin" password="True"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group name="financials" string="Balances &amp; Behavior">
+                            <field name="balance" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            <field name="behavior"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Simulated Request History">
+                            <field name="request_ids" readonly="1">
+                                <list string="Requests" decoration-success="status == 'approved'" decoration-danger="status in ('rejected', 'timeout', 'insufficient', 'invalid_pin', 'blocked')">
+                                    <field name="create_date" string="Date &amp; Time"/>
+                                    <field name="name" string="Request ID"/>
+                                    <field name="reference_id"/>
+                                    <field name="amount" widget="monetary" options="{'currency_field': 'currency'}"/>
+                                    <field name="status" widget="badge"/>
+                                    <field name="response_code"/>
+                                    <field name="transaction_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Test Wallet List View -->
+    <record id="view_waafipay_test_wallet_tree" model="ir.ui.view">
+        <field name="name">waafipay.test.wallet.list</field>
+        <field name="model">waafipay.test.wallet</field>
+        <field name="arch" type="xml">
+            <list string="Simulated Mobile Wallets" decoration-muted="state == 'blocked'">
+                <field name="phone"/>
+                <field name="holder_name"/>
+                <field name="provider_type"/>
+                <field name="balance" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="behavior" widget="badge" 
+                       decoration-success="behavior == 'approve'" 
+                       decoration-warning="behavior == 'insufficient'"
+                       decoration-danger="behavior in ('reject', 'timeout', 'invalid_pin')"/>
+                <field name="state" widget="badge" decoration-success="state == 'active'" decoration-danger="state == 'blocked'"/>
+                <field name="request_count"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Simulator Request Form View -->
+    <record id="view_waafipay_simulator_request_form" model="ir.ui.view">
+        <field name="name">waafipay.simulator.request.form</field>
+        <field name="model">waafipay.simulator.request</field>
+        <field name="arch" type="xml">
+            <form string="Simulated USSD Request Log" create="false" edit="false">
+                <header>
+                    <field name="status" widget="statusbar" statusbar_visible="approved,rejected,timeout,insufficient"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Request ID"/>
+                        <h2>
+                            <field name="name"/>
+                        </h2>
+                    </div>
+                    <group>
+                        <group string="Transaction Parameters">
+                            <field name="phone"/>
+                            <field name="wallet_id"/>
+                            <field name="amount"/>
+                            <field name="currency"/>
+                            <field name="reference_id"/>
+                            <field name="invoice_id"/>
+                            <field name="description"/>
+                        </group>
+                        <group string="WaafiPay Emulated Output">
+                            <field name="response_code"/>
+                            <field name="transaction_id"/>
+                            <field name="order_id"/>
+                            <field name="create_date" string="Received At"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Raw Request JSON">
+                            <field name="raw_request" widget="ace" options="{'mode': 'json'}"/>
+                        </page>
+                        <page string="Raw Response JSON">
+                            <field name="raw_response" widget="ace" options="{'mode': 'json'}"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Simulator Request List View -->
+    <record id="view_waafipay_simulator_request_tree" model="ir.ui.view">
+        <field name="name">waafipay.simulator.request.list</field>
+        <field name="model">waafipay.simulator.request</field>
+        <field name="arch" type="xml">
+            <list string="Simulated USSD Requests" create="false" decoration-success="status == 'approved'" decoration-danger="status != 'approved'">
+                <field name="create_date" string="Date &amp; Time"/>
+                <field name="name" string="Request ID"/>
+                <field name="phone"/>
+                <field name="amount"/>
+                <field name="reference_id"/>
+                <field name="status" widget="badge" decoration-success="status == 'approved'" decoration-danger="status != 'approved'"/>
+                <field name="response_code"/>
+                <field name="transaction_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_waafipay_test_wallet" model="ir.actions.act_window">
+        <field name="name">Simulated Wallets</field>
+        <field name="res_model">waafipay.test.wallet</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first simulated mobile wallet!
+            </p>
+            <p>
+                Configure phone numbers, balances, PINs, and automated approval/rejection behaviors.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_waafipay_simulator_request" model="ir.actions.act_window">
+        <field name="name">Simulated USSD Requests</field>
+        <field name="res_model">waafipay.simulator.request</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>
