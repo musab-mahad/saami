@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_saami_config_settings" model="ir.actions.act_window">
+        <field name="name">Settings</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'saami', 'bin_size': False}</field>
+    </record>
+
+    <record id="view_saami_config_settings" model="ir.ui.view">
+        <field name="name">saami.res.config.settings.view.form</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="50"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Saami" string="Saami" name="saami">
+                    <block title="API &amp; Authentication" id="saami_api_settings">
+                        <setting string="JWT Authentication" help="Configure the secret key and token lifetime for mobile and web APIs.">
+                            <field name="saami_jwt_secret" password="True"/>
+                            <div class="text-muted">
+                                Generated secret token for API signing
+                            </div>
+                            <div class="mt-2">
+                                <label for="saami_jwt_expiration_hours" string="Token Expiration (Hours)"/>
+                                <field name="saami_jwt_expiration_hours" class="oe_inline"/>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

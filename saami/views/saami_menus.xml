@@ -6,6 +6,13 @@
               sequence="10"
               web_icon="saami,static/description/icon.png"/>
 
+    <!-- Dashboard Menu (First Menu Item) -->
+    <menuitem id="menu_saami_dashboard"
+              name="Dashboard"
+              parent="menu_saami_root"
+              action="action_saami_dashboard"
+              sequence="0"/>
+
     <!-- Operations / Management Submenu -->
     <menuitem id="menu_saami_membership"
               name="Membership"
@@ -51,6 +58,14 @@
               name="Configuration"
               parent="menu_saami_root"
               sequence="50"/>
+
+    <!-- Settings Menu (under Configuration) -->
+    <menuitem id="menu_saami_settings"
+              name="Settings"
+              parent="menu_saami_configuration"
+              action="action_saami_config_settings"
+              sequence="0"
+              groups="base.group_system"/>
 
     <!-- Saami Products Menu -->
     <menuitem id="menu_saami_product"

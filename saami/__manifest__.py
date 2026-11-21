@@ -25,6 +25,8 @@ and capital contributions.
         'data/saami_product_data.xml',
         'data/saami_cron.xml',
         'wizards/saami_create_user_wizard_views.xml',
+        'views/res_config_settings_views.xml',
+        'views/saami_dashboard_views.xml',
         'views/saami_product_views.xml',
         'views/saami_contribution_transaction_views.xml',
         'views/saami_contribution_tracker_views.xml',
@@ -32,6 +34,12 @@ and capital contributions.
         'views/saami_member_views.xml',
         'views/saami_menus.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'saami/static/src/xml/saami_dashboard.xml',
+            'saami/static/src/js/saami_dashboard.js',
+        ],
+    },
     'installable': True,
     'application': True,
     'auto_install': False,
