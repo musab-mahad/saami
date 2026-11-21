@@ -38,8 +38,8 @@ class PaymentProvider(models.Model):
     def _waafipay_get_api_url(self):
         """ Return the API URL based on the provider state. """
         if self.state == 'enabled':
-            return 'https://api.waafipay.com/asm'
-        return 'http://sandbox.waafipay.net/asm'
+            return 'https://api.waafipay.net/asm'
+        return 'https://sandbox.waafipay.com/asm'
 
     def _waafipay_make_request(self, payload):
         """ Make a request to the WaafiPay API. """
