@@ -24,7 +24,7 @@
                                 <field name="saami_jwt_expiration_hours" class="oe_inline"/>
                             </div>
                         </setting>
-                        <setting string="Google Sign-In" help="Multiple IDs can be comma-separated.">
+                        <setting string="Google Client IDs" help="Multiple IDs can be comma-separated.">
                             <div class="w-100">
                                 <field name="saami_google_client_id" class="w-100" style="width: 100% !important;" placeholder="e.g. 12345-web.apps.googleusercontent.com"/>
                             </div>
