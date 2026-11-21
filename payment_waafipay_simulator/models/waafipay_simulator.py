@@ -71,7 +71,7 @@ class WaafipaySimulator(models.AbstractModel):
         req_id = payload.get('requestId') or str(uuid.uuid4())
         timestamp_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 
-        _logger.info("=== [WAAFIPAY SIMULATOR] Processing simulated request for %s (Amount: $%s) ===", phone, amount_val)
+        _logger.info("Sending request to WaafiPay (SIMULATOR):\n%s", json.dumps(payload, indent=2))
 
         # 1. Lookup or auto-create virtual wallet
         wallet = self.env['waafipay.test.wallet'].search([('phone', '=', phone)], limit=1)
@@ -177,5 +177,5 @@ class WaafipaySimulator(models.AbstractModel):
             'raw_response': json.dumps(response_data, indent=2),
         })
 
-        _logger.info("[WAAFIPAY SIMULATOR RESPONSE] Outcome: %s | Code: %s | Msg: %s", outcome, response_code, response_msg)
+        _logger.info("WaafiPay Response (SIMULATOR):\n%s", json.dumps(response_data, indent=2))
         return response_data
