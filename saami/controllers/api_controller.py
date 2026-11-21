@@ -83,6 +83,7 @@ class SaamiApiController(http.Controller):
             return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account with this email already exists.'}, status=400)
 
         try:
+            company = request.env.company or request.env['res.company'].sudo().search([], limit=1)
             state_id = int(data['state_id'])
             district_id = int(data['district_id'])
             district_rec = request.env['saami.district'].sudo().browse(district_id)
@@ -90,7 +91,7 @@ class SaamiApiController(http.Controller):
 
             # 1. Create Partner
             full_name = f"{data['first_name']} {data['middle_name']} {data['last_name']}".strip()
-            partner = request.env['res.partner'].sudo().create({
+            partner = request.env['res.partner'].sudo().with_company(company).create({
                 'name': full_name,
                 'email': email,
                 'phone': data['mobile'],
@@ -98,16 +99,19 @@ class SaamiApiController(http.Controller):
                 'country_id': int(data['country_id']),
                 'state_id': state_id,
                 'city': district_name,
+                'company_id': company.id,
             })
 
             # 2. Create Portal User
             portal_group = request.env.ref('base.group_portal')
-            user = Users.create({
+            user = Users.with_company(company).create({
                 'name': full_name,
                 'login': email,
                 'email': email,
                 'password': data['password'],
                 'partner_id': partner.id,
+                'company_id': company.id,
+                'company_ids': [(6, 0, [company.id])],
                 'groups_id': [(6, 0, [portal_group.id])],
             })
 
@@ -135,17 +139,17 @@ class SaamiApiController(http.Controller):
                 'kin1_name': data['kin1_name'],
                 'kin1_address': data['kin1_address'],
                 'kin1_mobile': data['kin1_mobile'],
-                'kin2_name': data['kin2_name'],
-                'kin2_address': data['kin2_address'],
-                'kin2_mobile': data['kin2_mobile'],
+                'kin2_name': data.get('kin2_name'),
+                'kin2_address': data.get('kin2_address'),
+                'kin2_mobile': data.get('kin2_mobile'),
                 'photo': data.get('photo'),
                 'identity_file': data.get('identity_file'),
                 'state': 'pending_payment',
             }
-            application = request.env['saami.member.application'].sudo().create(app_vals)
+            application = request.env['saami.member.application'].sudo().with_company(company).create(app_vals)
 
             # 4. Generate Registration Invoice
-            application.action_create_registration_invoice()
+            application.with_company(company).action_create_registration_invoice()
 
             return send_json({
                 'code': 'SUCCESS',
