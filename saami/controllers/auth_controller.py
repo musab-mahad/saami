@@ -82,13 +82,13 @@ class SaamiAuthController(http.Controller):
         token = generate_jwt(user, extra_payload=extra_payload)
 
         base_url = request.httprequest.url_root.rstrip('/') or request.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/')
-        avatar_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=avatar_128"
+        user_image_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=image_1920" if user.partner_id.image_1920 else None
 
         user_data = {
             'id': user.id,
             'name': user.name,
             'email': user.login,
-            'image_url': avatar_url,
+            'image_url': user_image_url,
             'status': status,
             'member_number': member_number,
             'application_number': application_number,
@@ -124,14 +124,20 @@ class SaamiAuthController(http.Controller):
         application = Application.search([('partner_id', '=', user.partner_id.id)], limit=1)
 
         base_url = request.httprequest.url_root.rstrip('/') or request.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/')
-        avatar_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=avatar_128"
+        user_image_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=image_1920" if user.partner_id.image_1920 else None
 
         status = 'guest'
         details = {}
 
         if member:
             status = member.state
-            photo_url = f"{base_url}/web/image?model=saami.member&id={member.id}&field=photo" if member.photo else avatar_url
+            if member.photo:
+                photo_url = f"{base_url}/web/image?model=saami.member&id={member.id}&field=photo"
+            elif member.partner_id.image_1920:
+                photo_url = f"{base_url}/web/image?model=res.partner&id={member.partner_id.id}&field=image_1920"
+            else:
+                photo_url = None
+
             details = {
                 'type': 'member',
                 'member_number': member.name,
@@ -152,7 +158,13 @@ class SaamiAuthController(http.Controller):
         elif application:
             status = application.state
             inv = application.invoice_id
-            photo_url = f"{base_url}/web/image?model=saami.member.application&id={application.id}&field=photo" if application.photo else avatar_url
+            if application.photo:
+                photo_url = f"{base_url}/web/image?model=saami.member.application&id={application.id}&field=photo"
+            elif user.partner_id.image_1920:
+                photo_url = f"{base_url}/web/image?model=res.partner&id={user.partner_id.id}&field=image_1920"
+            else:
+                photo_url = None
+
             details = {
                 'type': 'application',
                 'application_number': application.name,
@@ -182,7 +194,7 @@ class SaamiAuthController(http.Controller):
                 'id': user.id,
                 'name': user.name,
                 'email': user.login,
-                'image_url': avatar_url,
+                'image_url': user_image_url,
             },
             'profile': details,
         }, status=200)
