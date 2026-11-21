@@ -204,10 +204,10 @@ class SaamiApiController(http.Controller):
         if not provider:
             return send_json({'code': 'CONFIG_ERROR', 'message': 'WaafiPay provider is not active.'}, status=500)
 
-        payment_method = provider.payment_method_ids[:1] or request.env['payment.method'].sudo().search([('code', '=', 'mobile_money')], limit=1)
+        payment_method = provider.payment_method_ids.filtered(lambda m: m.code == 'waafipay')[:1] or request.env.ref('payment_waafipay.payment_method_waafipay', raise_if_not_found=False)
         if not payment_method:
-            payment_method = request.env['payment.method'].sudo().search([], limit=1)
-        if payment_method and payment_method not in provider.payment_method_ids:
+            return send_json({'code': 'CONFIG_ERROR', 'message': 'WaafiPay payment method is not configured on provider.'}, status=500)
+        if payment_method not in provider.payment_method_ids:
             provider.payment_method_ids = [(4, payment_method.id)]
 
         # Create payment.transaction
@@ -271,10 +271,10 @@ class SaamiApiController(http.Controller):
         if not provider:
             return send_json({'code': 'CONFIG_ERROR', 'message': 'WaafiPay provider is not active.'}, status=500)
 
-        payment_method = provider.payment_method_ids[:1] or request.env['payment.method'].sudo().search([('code', '=', 'mobile_money')], limit=1)
+        payment_method = provider.payment_method_ids.filtered(lambda m: m.code == 'waafipay')[:1] or request.env.ref('payment_waafipay.payment_method_waafipay', raise_if_not_found=False)
         if not payment_method:
-            payment_method = request.env['payment.method'].sudo().search([], limit=1)
-        if payment_method and payment_method not in provider.payment_method_ids:
+            return send_json({'code': 'CONFIG_ERROR', 'message': 'WaafiPay payment method is not configured on provider.'}, status=500)
+        if payment_method not in provider.payment_method_ids:
             provider.payment_method_ids = [(4, payment_method.id)]
 
         reference = f"CONTR-{member.name}-{fields.Datetime.now().strftime('%Y%m%d%H%M%S')}"

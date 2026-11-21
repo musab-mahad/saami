@@ -38,7 +38,7 @@ class PaymentProvider(models.Model):
     def _get_default_payment_method_codes(self):
         default_codes = super()._get_default_payment_method_codes()
         if self.code == 'waafipay':
-            default_codes.add('mobile_money')
+            default_codes.add('waafipay')
         return default_codes
 
     def _waafipay_get_api_url(self):

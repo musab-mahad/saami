@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="payment_method_waafipay" model="payment.method">
+        <field name="name">WaafiPay</field>
+        <field name="code">waafipay</field>
+        <field name="sequence">10</field>
+        <field name="active">True</field>
+    </record>
+
+</odoo>
