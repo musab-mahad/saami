@@ -23,6 +23,7 @@
         <field name="arch" type="xml">
             <form string="Contribution Tracker" create="false">
                 <header>
+                    <button name="action_create_invoice" string="Create Invoice" type="object" class="oe_highlight" invisible="state in ('paid', 'excess')"/>
                     <field name="state" widget="statusbar" statusbar_visible="unpaid,partial,paid,excess"/>
                 </header>
                 <sheet>

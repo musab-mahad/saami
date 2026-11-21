@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 from datetime import datetime
 
 
@@ -109,6 +110,47 @@ class SaamiContributionTracker(models.Model):
                 rec.state = 'paid'
             else:
                 rec.state = 'excess'
+
+    def action_create_invoice(self):
+        self.ensure_one()
+        if not self.member_id.partner_id:
+            raise UserError(_("This member does not have a linked partner to invoice."))
+        contrib_prod = self.env['saami.product'].search([
+            ('purpose', '=', 'contribution'),
+            ('is_active', '=', True)
+        ], limit=1)
+        if not contrib_prod:
+            raise UserError(_("No active Monthly Contribution product configured in Saami Products."))
+
+        open_invs = self.invoice_ids.filtered(lambda inv: inv.state != 'cancel')
+        invoiced_amount = sum(open_invs.mapped('amount_total'))
+        remaining = self.expected_amount - invoiced_amount
+        if remaining <= 0:
+            raise UserError(_("This tracker is already fully invoiced."))
+
+        invoice = self.env['account.move'].create({
+            'move_type': 'out_invoice',
+            'partner_id': self.member_id.partner_id.id,
+            'invoice_date': fields.Date.today(),
+            'date': fields.Date.today(),
+            'ref': f"Contribution - {self.member_id.name} ({self.month_name})",
+            'invoice_line_ids': [(0, 0, {
+                'product_id': contrib_prod.product_id.id,
+                'name': contrib_prod.description or f"{self.member_id.name} Monthly Capital Contribution - {self.month_name}",
+                'quantity': 1.0,
+                'price_unit': remaining,
+            })],
+        })
+        invoice.action_post()
+        self.write({'invoice_ids': [(4, invoice.id)]})
+        return {
+            'name': _('Customer Invoice'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'view_mode': 'form',
+            'res_id': invoice.id,
+            'target': 'current',
+        }
 
     @api.model
     def _cron_generate_monthly_trackers(self):

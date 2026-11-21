@@ -76,7 +76,52 @@ class PaymentTransaction(models.Model):
                 member = tracker.member_id
                 _logger.info("Fulfilling Saami monthly contribution for member %s (%s)", member.name, tracker.month_name)
 
-                # Create paid contribution transaction
+                # 1. Look for existing unpaid/partial invoice on this tracker
+                open_invoice = tracker.invoice_ids.filtered(
+                    lambda inv: inv.state == 'posted' and inv.payment_state in ('not_paid', 'partial')
+                )[:1]
+
+                invoice = open_invoice
+                if not invoice:
+                    contrib_prod = self.env['saami.product'].sudo().search([
+                        ('purpose', '=', 'contribution'),
+                        ('is_active', '=', True)
+                    ], limit=1)
+                    try:
+                        invoice_vals = {
+                            'move_type': 'out_invoice',
+                            'partner_id': member.partner_id.id,
+                            'invoice_date': fields.Date.context_today(tx),
+                            'date': fields.Date.context_today(tx),
+                            'ref': f"Contribution - {member.name} ({tracker.month_name}) - {tx.reference}",
+                            'invoice_line_ids': [(0, 0, {
+                                'product_id': contrib_prod.product_id.id if contrib_prod and contrib_prod.product_id else False,
+                                'name': contrib_prod.description or f"{member.name} Monthly Capital Contribution - {tracker.month_name}",
+                                'quantity': 1.0,
+                                'price_unit': tx.amount,
+                            })],
+                        }
+                        invoice = self.env['account.move'].sudo().create(invoice_vals)
+                        invoice.action_post()
+                        tracker.sudo().write({'invoice_ids': [(4, invoice.id)]})
+                    except Exception as e:
+                        _logger.error("Could not create/post invoice for contribution: %s", e)
+
+                # 2. Register payment on the invoice
+                if invoice and invoice.payment_state in ('not_paid', 'partial'):
+                    try:
+                        payment_register = self.env['account.payment.register'].sudo().with_context(
+                            active_model='account.move',
+                            active_ids=invoice.ids,
+                        ).create({
+                            'amount': tx.amount,
+                            'payment_date': fields.Date.context_today(tx),
+                        })
+                        payment_register._create_payments()
+                    except Exception as e:
+                        _logger.warning("Could not auto-register payment for contribution invoice %s: %s", invoice.name, e)
+
+                # 3. Create paid contribution transaction
                 tx_record = self.env['saami.contribution.transaction'].sudo().create({
                     'member_id': member.id,
                     'tracker_id': tracker.id,
@@ -86,6 +131,7 @@ class PaymentTransaction(models.Model):
                     'currency_id': tx.currency_id.id,
                     'payment_method': tx.provider_code or 'online',
                     'external_reference': tx.reference,
+                    'invoice_id': invoice.id if invoice else False,
                     'state': 'paid',
                 })
 
