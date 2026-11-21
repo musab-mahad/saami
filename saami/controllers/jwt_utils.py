@@ -11,7 +11,7 @@ from odoo.http import request
 _logger = logging.getLogger(__name__)
 
 JWT_ALGORITHM = "HS256"
-DEFAULT_EXPIRATION_HOURS = 24
+DEFAULT_EXPIRATION_HOURS = 168  # 7 days (7 * 24 hours)
 
 
 def get_jwt_secret():

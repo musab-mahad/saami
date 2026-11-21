@@ -13,9 +13,9 @@ class ResConfigSettings(models.TransientModel):
     )
     saami_jwt_expiration_hours = fields.Integer(
         string='JWT Expiration (Hours)',
-        default=24,
+        default=168,
         config_parameter='saami.jwt_expiration_hours',
-        help="Validity duration of issued access tokens in hours.",
+        help="Validity duration of issued access tokens in hours (168 hours = 7 days).",
     )
 
     @api.model
@@ -28,6 +28,6 @@ class ResConfigSettings(models.TransientModel):
             ICP.set_param('saami.jwt_secret', secret)
         res.update(
             saami_jwt_secret=secret,
-            saami_jwt_expiration_hours=int(ICP.get_param('saami.jwt_expiration_hours', 24)),
+            saami_jwt_expiration_hours=int(ICP.get_param('saami.jwt_expiration_hours', 168)),
         )
         return res
