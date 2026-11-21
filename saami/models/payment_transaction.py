@@ -107,21 +107,7 @@ class PaymentTransaction(models.Model):
                     except Exception as e:
                         _logger.error("Could not create/post invoice for contribution: %s", e)
 
-                # 2. Register payment on the invoice
-                if invoice and invoice.payment_state in ('not_paid', 'partial'):
-                    try:
-                        payment_register = self.env['account.payment.register'].sudo().with_context(
-                            active_model='account.move',
-                            active_ids=invoice.ids,
-                        ).create({
-                            'amount': tx.amount,
-                            'payment_date': fields.Date.context_today(tx),
-                        })
-                        payment_register._create_payments()
-                    except Exception as e:
-                        _logger.warning("Could not auto-register payment for contribution invoice %s: %s", invoice.name, e)
-
-                # 3. Create paid contribution transaction
+                # 2. Create paid contribution transaction first to link with invoice
                 tx_record = self.env['saami.contribution.transaction'].sudo().create({
                     'member_id': member.id,
                     'tracker_id': tracker.id,
@@ -134,6 +120,21 @@ class PaymentTransaction(models.Model):
                     'invoice_id': invoice.id if invoice else False,
                     'state': 'paid',
                 })
+
+                # 3. Register payment on the invoice (with context to avoid duplicate tx creation)
+                if invoice and invoice.payment_state in ('not_paid', 'partial'):
+                    try:
+                        payment_register = self.env['account.payment.register'].sudo().with_context(
+                            active_model='account.move',
+                            active_ids=invoice.ids,
+                            skip_saami_sync=True,
+                        ).create({
+                            'amount': tx.amount,
+                            'payment_date': fields.Date.context_today(tx),
+                        })
+                        payment_register._create_payments()
+                    except Exception as e:
+                        _logger.warning("Could not auto-register payment for contribution invoice %s: %s", invoice.name, e)
 
                 # Recompute tracker
                 tracker._compute_actual_amount()

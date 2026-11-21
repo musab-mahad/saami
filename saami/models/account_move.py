@@ -14,6 +14,9 @@ class AccountMove(models.Model):
         When an invoice linked to a contribution tracker is paid directly in Accounting,
         automatically generate the saami.contribution.transaction and recompute the tracker.
         """
+        if self.env.context.get('skip_saami_sync'):
+            return
+
         Transaction = self.env['saami.contribution.transaction'].sudo()
         Tracker = self.env['saami.contribution.tracker'].sudo()
 
