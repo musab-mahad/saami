@@ -37,3 +37,5 @@ odoo.conf
 *.txt
 *.zip
 *.log
+API_DOCUMENTATION.md
+
