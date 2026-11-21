@@ -37,15 +37,18 @@ class SaamiAuthController(http.Controller):
             }, status=400)
 
         # Authenticate against Odoo database
+        db = request.db or (request.env.cr and request.env.cr.dbname) or request.session.db
+        credential = {'type': 'password', 'login': login, 'password': password}
         try:
-            uid = request.session.authenticate(request.session.db, login, password)
+            auth_info = request.session.authenticate(db, credential)
+            uid = auth_info['uid']
         except AccessDenied:
             return send_json({
                 'code': 'AUTH_FAILED',
                 'message': 'Invalid login credentials.',
             }, status=401)
         except Exception as e:
-            _logger.error("Authentication error: %s", str(e))
+            _logger.error("Authentication error: %s", str(e), exc_info=True)
             return send_json({
                 'code': 'SERVER_ERROR',
                 'message': 'Authentication engine encountered an issue.',
