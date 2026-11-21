@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import requests
 from odoo import http, _
 from odoo.http import request
 from odoo.exceptions import AccessDenied
@@ -15,9 +16,82 @@ from .jwt_utils import (
 _logger = logging.getLogger(__name__)
 
 
+def verify_google_id_token(id_token, expected_email=None):
+    """
+    Verifies a Google ID token with Google's tokeninfo endpoint.
+    Checks:
+    1. HTTP response is 200 from Google.
+    2. aud matches one of the configured Client IDs in saami.google_client_id.
+    3. email matches expected_email (case-insensitive) if expected_email is provided.
+    4. email_verified is true.
+    Returns: (is_valid: bool, error_dict_or_payload: dict)
+    """
+    if not id_token:
+        return False, {
+            "code": "MISSING_GOOGLE_TOKEN",
+            "message": "Google ID token is required for Google authentication."
+        }
+
+    raw_client_ids = request.env['ir.config_parameter'].sudo().get_param('saami.google_client_id', '')
+    allowed_client_ids = [c.strip() for c in (raw_client_ids or '').split(',') if c.strip()]
+    if not allowed_client_ids:
+        _logger.error("Google login failed: saami.google_client_id is not configured in settings.")
+        return False, {
+            "code": "CONFIG_ERROR",
+            "message": "Google authentication is not properly configured on the server."
+        }
+
+    try:
+        resp = requests.get(
+            'https://oauth2.googleapis.com/tokeninfo',
+            params={'id_token': id_token},
+            timeout=10
+        )
+    except Exception as exc:
+        _logger.error("Google token verification request failed: %s", str(exc))
+        return False, {
+            "code": "GOOGLE_VERIFY_FAILED",
+            "message": "Unable to verify Google token with Google servers."
+        }
+
+    if resp.status_code != 200:
+        _logger.warning("Google token verification rejected by Google: status %s, body: %s", resp.status_code, resp.text)
+        return False, {
+            "code": "INVALID_GOOGLE_TOKEN",
+            "message": "Invalid or expired Google token."
+        }
+
+    payload = resp.json()
+    token_aud = payload.get('aud', '').strip()
+    token_email = (payload.get('email') or '').strip().lower()
+    token_email_verified = payload.get('email_verified') in (True, 'true', 'True', 1)
+
+    if token_aud not in allowed_client_ids:
+        _logger.warning("Google token aud mismatch: received %s, allowed: %s", token_aud, allowed_client_ids)
+        return False, {
+            "code": "INVALID_GOOGLE_TOKEN",
+            "message": "Google token audience mismatch."
+        }
+
+    if not token_email_verified:
+        return False, {
+            "code": "GOOGLE_EMAIL_NOT_VERIFIED",
+            "message": "Your Google email address is not verified by Google."
+        }
+
+    if expected_email and token_email != expected_email.strip().lower():
+        _logger.warning("Google token email mismatch: payload %s vs expected %s", token_email, expected_email)
+        return False, {
+            "code": "GOOGLE_EMAIL_MISMATCH",
+            "message": "The email in the Google token does not match the provided email."
+        }
+
+    return True, payload
+
+
 class SaamiAuthController(http.Controller):
 
-    @http.route('/api/saami/auth/login', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    @http.route(['/api/saami/auth/login', '/api/saami/auth/google'], type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
     def login(self):
         preflight = handle_cors(['POST', 'OPTIONS'])
         if preflight:
@@ -29,32 +103,67 @@ class SaamiAuthController(http.Controller):
 
         login = (data.get('login') or data.get('email') or '').strip().lower()
         password = data.get('password') or ''
+        id_token = (data.get('id_token') or '').strip()
+        login_type = data.get('login_type') or ('google' if id_token else 'password')
+        is_google_auth = (
+            request.httprequest.path.rstrip('/').endswith('/google')
+            or login_type == 'google'
+            or bool(id_token)
+        )
 
-        if not login or not password:
-            return send_json({
-                'code': 'VALIDATION_ERROR',
-                'message': 'Login and password are required.',
-            }, status=400)
+        if is_google_auth:
+            if not id_token:
+                return send_json({
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'Google ID token (id_token) is required for Google login.',
+                }, status=400)
 
-        # Authenticate against Odoo database
-        db = request.db or (request.env.cr and request.env.cr.dbname) or request.session.db
-        credential = {'type': 'password', 'login': login, 'password': password}
-        try:
-            auth_info = request.session.authenticate(db, credential)
-            uid = auth_info['uid']
-        except AccessDenied:
-            return send_json({
-                'code': 'AUTH_FAILED',
-                'message': 'Invalid login credentials.',
-            }, status=401)
-        except Exception as e:
-            _logger.error("Authentication error: %s", str(e), exc_info=True)
-            return send_json({
-                'code': 'SERVER_ERROR',
-                'message': 'Authentication engine encountered an issue.',
-            }, status=500)
+            is_valid, token_res = verify_google_id_token(id_token, expected_email=login or None)
+            if not is_valid:
+                return send_json(token_res, status=401)
 
-        user = request.env['res.users'].sudo().browse(uid)
+            token_email = (token_res.get('email') or login).strip().lower()
+            user = request.env['res.users'].sudo().search([('login', '=ilike', token_email)], limit=1)
+
+            if not user:
+                return send_json({
+                    'code': 'USER_NOT_FOUND',
+                    'message': 'No registered member account found for this Google email. Please register first.',
+                }, status=404)
+
+            if not user.active:
+                return send_json({
+                    'code': 'ACCOUNT_INACTIVE',
+                    'message': 'Your account is deactivated. Please contact support.',
+                }, status=403)
+
+            uid = user.id
+        else:
+            if not login or not password:
+                return send_json({
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'Login and password are required.',
+                }, status=400)
+
+            # Authenticate against Odoo database
+            db = request.db or (request.env.cr and request.env.cr.dbname) or request.session.db
+            credential = {'type': 'password', 'login': login, 'password': password}
+            try:
+                auth_info = request.session.authenticate(db, credential)
+                uid = auth_info['uid']
+            except AccessDenied:
+                return send_json({
+                    'code': 'AUTH_FAILED',
+                    'message': 'Invalid login credentials.',
+                }, status=401)
+            except Exception as e:
+                _logger.error("Authentication error: %s", str(e), exc_info=True)
+                return send_json({
+                    'code': 'SERVER_ERROR',
+                    'message': 'Authentication engine encountered an issue.',
+                }, status=500)
+
+            user = request.env['res.users'].sudo().browse(uid)
 
         # Find linked application and member record
         Application = request.env['saami.member.application'].sudo()

@@ -27,6 +27,12 @@
                                 <field name="saami_jwt_expiration_hours" class="oe_inline"/>
                             </div>
                         </setting>
+                        <setting string="Google Sign-In" help="Google OAuth Client ID(s) from Google Cloud Console for mobile/web sign-in. Multiple IDs can be comma-separated.">
+                            <field name="saami_google_client_id" placeholder="e.g. 12345-web.apps.googleusercontent.com, 12345-android.apps.googleusercontent.com"/>
+                            <div class="text-muted">
+                                Comma-separated Client IDs for Web, Android, and iOS apps
+                            </div>
+                        </setting>
                     </block>
                 </app>
             </xpath>

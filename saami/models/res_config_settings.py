@@ -17,6 +17,11 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='saami.jwt_expiration_hours',
         help="Validity duration of issued access tokens in hours (168 hours = 7 days).",
     )
+    saami_google_client_id = fields.Char(
+        string='Google Client ID(s)',
+        config_parameter='saami.google_client_id',
+        help="Google OAuth Client ID(s) from Google Cloud Console. Multiple IDs (Web, Android, iOS) can be comma-separated.",
+    )
 
     @api.model
     def get_values(self):
@@ -29,5 +34,6 @@ class ResConfigSettings(models.TransientModel):
         res.update(
             saami_jwt_secret=secret,
             saami_jwt_expiration_hours=int(ICP.get_param('saami.jwt_expiration_hours', 168)),
+            saami_google_client_id=ICP.get_param('saami.google_client_id', ''),
         )
         return res
