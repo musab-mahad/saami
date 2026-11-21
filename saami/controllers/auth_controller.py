@@ -81,18 +81,30 @@ class SaamiAuthController(http.Controller):
         }
         token = generate_jwt(user, extra_payload=extra_payload)
 
+        user_data = {
+            'id': user.id,
+            'name': user.name,
+            'email': user.login,
+            'status': status,
+            'member_number': member_number,
+            'application_number': application_number,
+        }
+        if application and not member:
+            inv = application.invoice_id
+            user_data['registration'] = {
+                'invoice_id': inv.id if inv else False,
+                'amount_total': inv.amount_total if inv else 0.0,
+                'amount_due': inv.amount_residual if inv else 0.0,
+                'currency': (inv.currency_id.name or 'USD') if inv else 'USD',
+                'payment_status': inv.payment_state if inv else 'not_paid',
+                'is_paid': inv.payment_state in ('paid', 'in_payment') if inv else False,
+            }
+
         return send_json({
             'code': 'SUCCESS',
             'message': 'Logged in successfully.',
             'token': token,
-            'user': {
-                'id': user.id,
-                'name': user.name,
-                'email': user.login,
-                'status': status,
-                'member_number': member_number,
-                'application_number': application_number,
-            }
+            'user': user_data,
         }, status=200)
 
     @http.route('/api/saami/auth/me', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
@@ -130,6 +142,7 @@ class SaamiAuthController(http.Controller):
             }
         elif application:
             status = application.state
+            inv = application.invoice_id
             details = {
                 'type': 'application',
                 'application_number': application.name,
@@ -143,7 +156,12 @@ class SaamiAuthController(http.Controller):
                 'country_id': application.country_id.id if application.country_id else False,
                 'country': application.country_id.name if application.country_id else False,
                 'state': application.state,
-                'invoice_id': application.invoice_id.id if application.invoice_id else False,
+                'invoice_id': inv.id if inv else False,
+                'registration_fee': inv.amount_total if inv else 0.0,
+                'amount_due': inv.amount_residual if inv else 0.0,
+                'currency': (inv.currency_id.name or 'USD') if inv else 'USD',
+                'payment_status': inv.payment_state if inv else 'not_paid',
+                'is_paid': inv.payment_state in ('paid', 'in_payment') if inv else False,
             }
 
         return send_json({
