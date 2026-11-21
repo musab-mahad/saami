@@ -103,6 +103,7 @@ class PaymentTransaction(models.Model):
                         }
                         invoice = self.env['account.move'].sudo().create(invoice_vals)
                         invoice.action_post()
+                        tx.invoice_ids = [(4, invoice.id)]
                         tracker.sudo().write({'invoice_ids': [(4, invoice.id)]})
                     except Exception as e:
                         _logger.error("Could not create/post invoice for contribution: %s", e)

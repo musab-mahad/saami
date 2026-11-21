@@ -21,6 +21,9 @@ class AccountMove(models.Model):
         Tracker = self.env['saami.contribution.tracker'].sudo()
 
         for move in self:
+            # Skip if this move is handled by an online payment gateway transaction
+            if move.transaction_ids:
+                continue
             if move.state == 'posted' and move.payment_state in ('paid', 'in_payment'):
                 trackers = Tracker.search([('invoice_ids', 'in', move.id)])
                 for trk in trackers:
