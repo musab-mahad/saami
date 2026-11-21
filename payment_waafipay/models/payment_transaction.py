@@ -68,7 +68,7 @@ class PaymentTransaction(models.Model):
                 'transaction_id': tx_id,
                 'message': response.get('responseMsg', 'Payment confirmed successfully.'),
             }
-        elif response_code in ('5206', '5001', '1001'):  # Pending user approval / PIN
+        elif response_code in ('1001',):  # Asynchronous USSD push sent, awaiting user PIN
             self.write({
                 'waafipay_tx_id': tx_id,
             })
@@ -80,6 +80,7 @@ class PaymentTransaction(models.Model):
                 'message': response.get('responseMsg', 'USSD push sent. Awaiting PIN entry on your phone.'),
             }
         else:
+            # Explicit failure codes (5206 Insufficient funds, 5310 User rejected, 5301 Invalid PIN, 5001 etc.)
             err_msg = response.get('responseMsg', 'Transaction failed')
             self._set_error(err_msg)
             return {
