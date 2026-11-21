@@ -160,6 +160,28 @@ class SaamiMemberApplication(models.Model):
             rec.invoice_id = invoice.id
             rec.state = 'pending_payment'
 
+    def action_create_user(self):
+        """Open user creation wizard for the application."""
+        self.ensure_one()
+        if self.user_id:
+            raise ValidationError(_("This applicant already has a user account."))
+        if not self.email:
+            raise ValidationError(_("An email address is required to create a user account."))
+
+        return {
+            'name': _('Create Portal User'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.create.user.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_application_id': self.id,
+                'default_partner_id': self.partner_id.id,
+                'default_name': self.full_name,
+                'default_login': self.email,
+            }
+        }
+
     def action_submit_payment(self):
         """Called once payment for registration fee is initiated / awaiting confirmation."""
         for rec in self:

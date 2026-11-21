@@ -2,3 +2,4 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_saami_member_application_user,saami.member.application.user,model_saami_member_application,base.group_user,1,1,1,1
 access_saami_member_user,saami.member.user,model_saami_member,base.group_user,1,1,1,1
 access_saami_product_user,saami.product.user,model_saami_product,base.group_user,1,1,1,1
+access_saami_create_user_wizard_user,saami.create.user.wizard.user,model_saami_create_user_wizard,base.group_user,1,1,1,1

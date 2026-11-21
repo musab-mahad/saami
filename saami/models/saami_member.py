@@ -144,6 +144,28 @@ class SaamiMember(models.Model):
                     rec.partner_id.name = rec.full_name
         return res
 
+    def action_create_user(self):
+        """Open user creation wizard for the member."""
+        self.ensure_one()
+        if self.user_id:
+            raise ValidationError(_("This member already has a user account."))
+        if not self.email:
+            raise ValidationError(_("An email address is required to create a user account."))
+
+        return {
+            'name': _('Create Portal User'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.create.user.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_member_id': self.id,
+                'default_partner_id': self.partner_id.id,
+                'default_name': self.full_name,
+                'default_login': self.email,
+            }
+        }
+
     def action_suspend(self):
         self.write({'state': 'suspended'})
 

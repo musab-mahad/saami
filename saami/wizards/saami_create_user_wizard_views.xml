@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_saami_create_user_wizard_form" model="ir.ui.view">
+        <field name="name">saami.create.user.wizard.form</field>
+        <field name="model">saami.create.user.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Create Portal User">
+                <sheet>
+                    <div class="alert alert-info text-center mb-3" role="alert">
+                        Create a portal login account for this cooperative applicant or member.
+                    </div>
+                    <group>
+                        <group string="Account Information">
+                            <field name="name"/>
+                            <field name="login"/>
+                        </group>
+                        <group string="Password &amp; Access">
+                            <field name="password" password="True" placeholder="Leave empty to send email invitation"/>
+                            <field name="send_email" invisible="password"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_confirm_create_user" string="Create User" type="object" class="oe_highlight"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

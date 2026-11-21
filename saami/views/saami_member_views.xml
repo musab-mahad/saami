@@ -101,7 +101,15 @@
                                 <group string="Linked Records">
                                     <field name="partner_id" readonly="1"/>
                                     <field name="application_id" readonly="1"/>
-                                    <field name="user_id" readonly="1" invisible="not user_id"/>
+                                    <label for="user_id" string="Portal User"/>
+                                    <div class="o_row">
+                                        <field name="user_id" widget="many2one_avatar_user" readonly="1"/>
+                                        <button string="Create User"
+                                                class="btn btn-link"
+                                                type="object"
+                                                name="action_create_user"
+                                                invisible="user_id"/>
+                                    </div>
                                 </group>
                             </group>
                         </page>
