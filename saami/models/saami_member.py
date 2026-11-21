@@ -175,19 +175,6 @@ class SaamiMember(models.Model):
             'target': 'current',
         }
 
-    def action_view_application(self):
-        self.ensure_one()
-        if not self.application_id:
-            return
-        return {
-            'name': _('Member Application'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'saami.member.application',
-            'view_mode': 'form',
-            'res_id': self.application_id.id,
-            'target': 'current',
-        }
-
     def action_view_user(self):
         self.ensure_one()
         if not self.user_id:

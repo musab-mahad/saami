@@ -32,6 +32,7 @@
                     <field name="state" widget="statusbar" statusbar_visible="active,suspended,terminated"/>
                 </header>
                 <sheet>
+                    <field name="currency_id" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_contributions" type="object" class="oe_stat_button" icon="fa-money">
                             <div class="o_stat_info">
@@ -41,12 +42,6 @@
                         </button>
                         <button name="action_view_invoices" type="object" class="oe_stat_button" icon="fa-pencil-square-o">
                             <field name="invoice_count" widget="statinfo" string="Invoices"/>
-                        </button>
-                        <button name="action_view_application" type="object" class="oe_stat_button" icon="fa-file-text-o" invisible="not application_id">
-                            <div class="o_stat_info">
-                                <span class="o_stat_text">Application</span>
-                                <span class="o_stat_value"><field name="application_id" options="{'no_open': True}" readonly="1"/></span>
-                            </div>
                         </button>
                         <button name="action_view_user" type="object" class="oe_stat_button" icon="fa-user" invisible="not user_id">
                             <div class="o_stat_info">
