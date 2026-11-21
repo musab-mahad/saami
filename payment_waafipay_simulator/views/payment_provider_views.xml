@@ -6,10 +6,8 @@
         <field name="model">payment.provider</field>
         <field name="inherit_id" ref="payment_waafipay.payment_provider_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//group[@string='WaafiPay Test Tools']" position="before">
-                <group string="Simulator Engine">
-                    <field name="waafipay_use_simulator" widget="boolean_toggle"/>
-                </group>
+            <xpath expr="//field[@name='waafipay_test_phone']" position="before">
+                <field name="waafipay_use_simulator" widget="boolean_toggle"/>
             </xpath>
         </field>
     </record>

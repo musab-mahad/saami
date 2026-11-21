@@ -15,8 +15,8 @@
                 </group>
             </xpath>
             <xpath expr="//notebook" position="inside">
-                <page string="Developer Tools" invisible="code != 'waafipay'">
-                    <group string="WaafiPay Test Tools">
+                <page name="waafipay_developer_tools" string="Developer Tools" invisible="code != 'waafipay'">
+                    <group name="waafipay_test_tools" string="WaafiPay Test Tools">
                         <field name="waafipay_test_phone" placeholder="25261XXXXXX"/>
                         <button name="button_test_ussd_push" 
                                 type="object" 
