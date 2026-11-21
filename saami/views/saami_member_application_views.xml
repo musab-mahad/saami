@@ -45,13 +45,13 @@
                         <button name="action_view_user" type="object" class="oe_stat_button" icon="fa-user" invisible="not user_id">
                             <div class="o_stat_info">
                                 <span class="o_stat_text">User Account</span>
-                                <span class="o_stat_value"><field name="user_id"/></span>
+                                <span class="o_stat_value"><field name="user_id" options="{'no_open': True}" readonly="1"/></span>
                             </div>
                         </button>
                         <button name="action_view_member" type="object" class="oe_stat_button" icon="fa-id-card-o" invisible="not member_id">
                             <div class="o_stat_info">
                                 <span class="o_stat_text">Member</span>
-                                <span class="o_stat_value"><field name="member_id"/></span>
+                                <span class="o_stat_value"><field name="member_id" options="{'no_open': True}" readonly="1"/></span>
                             </div>
                         </button>
                     </div>
