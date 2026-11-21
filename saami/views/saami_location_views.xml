@@ -8,12 +8,12 @@
         <field name="name">saami.district.list</field>
         <field name="model">saami.district</field>
         <field name="arch" type="xml">
-            <list string="Districts" editable="bottom">
+            <list string="Districts">
                 <field name="name"/>
                 <field name="state_id" options="{'no_create': True}"/>
                 <field name="code"/>
-                <field name="member_count" string="Active Members"/>
-                <field name="application_count" string="Applications"/>
+                <field name="member_count" string="Active Members" width="130px"/>
+                <field name="application_count" string="Applications" width="120px"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>
         </field>
@@ -25,6 +25,14 @@
         <field name="arch" type="xml">
             <form string="District">
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_members" type="object" class="oe_stat_button" icon="fa-users">
+                            <field name="member_count" widget="statinfo" string="Members"/>
+                        </button>
+                        <button name="action_view_applications" type="object" class="oe_stat_button" icon="fa-file-text-o">
+                            <field name="application_count" widget="statinfo" string="Applications"/>
+                        </button>
+                    </div>
                     <div class="oe_title">
                         <label for="name" string="District Name"/>
                         <h1>
@@ -38,8 +46,6 @@
                         </group>
                         <group>
                             <field name="active" widget="boolean_toggle"/>
-                            <field name="member_count" readonly="1"/>
-                            <field name="application_count" readonly="1"/>
                         </group>
                     </group>
                 </sheet>
@@ -66,6 +72,9 @@
         <field name="name">Districts</field>
         <field name="res_model">saami.district</field>
         <field name="view_mode">list,form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_saami_district_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_saami_district_form')})]"/>
         <field name="context">{'search_default_group_by_region': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
@@ -80,10 +89,74 @@
     <!-- ============================================================= -->
     <!-- REGIONS (res.country.state filtered to Somalia)               -->
     <!-- ============================================================= -->
+    <record id="view_saami_region_tree" model="ir.ui.view">
+        <field name="name">saami.region.list</field>
+        <field name="model">res.country.state</field>
+        <field name="arch" type="xml">
+            <list string="Regions">
+                <field name="name" string="Region Name"/>
+                <field name="code"/>
+                <field name="country_id" options="{'no_create': True, 'no_open': True}"/>
+                <field name="district_count" string="Districts" width="110px"/>
+                <field name="member_count" string="Active Members" width="130px"/>
+                <field name="application_count" string="Applications" width="120px"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_saami_region_form" model="ir.ui.view">
+        <field name="name">saami.region.form</field>
+        <field name="model">res.country.state</field>
+        <field name="arch" type="xml">
+            <form string="Region">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_members" type="object" class="oe_stat_button" icon="fa-users">
+                            <field name="member_count" widget="statinfo" string="Members"/>
+                        </button>
+                        <button name="action_view_applications" type="object" class="oe_stat_button" icon="fa-file-text-o">
+                            <field name="application_count" widget="statinfo" string="Applications"/>
+                        </button>
+                        <button name="action_view_districts" type="object" class="oe_stat_button" icon="fa-map-marker">
+                            <field name="district_count" widget="statinfo" string="Districts"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name" string="Region Name"/>
+                        <h1>
+                            <field name="name" placeholder="e.g. Banaadir"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="code"/>
+                            <field name="country_id" options="{'no_create': True, 'no_open': True}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Districts" name="districts">
+                            <field name="district_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="code"/>
+                                    <field name="member_count" string="Members"/>
+                                    <field name="application_count" string="Applications"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="action_saami_region" model="ir.actions.act_window">
         <field name="name">Regions</field>
         <field name="res_model">res.country.state</field>
         <field name="view_mode">list,form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_saami_region_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_saami_region_form')})]"/>
         <field name="domain">[('country_id.code', '=', 'SO')]</field>
         <field name="context" eval="{'default_country_id': ref('base.so')}"/>
         <field name="help" type="html">

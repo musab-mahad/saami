@@ -32,3 +32,25 @@ class SaamiDistrict(models.Model):
         for rec in self:
             rec.member_count = self.env['saami.member'].search_count([('district_id', '=', rec.id)])
             rec.application_count = self.env['saami.member.application'].search_count([('district_id', '=', rec.id)])
+
+    def action_view_members(self):
+        self.ensure_one()
+        return {
+            'name': _('Members - %s', self.name),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.member',
+            'view_mode': 'list,form',
+            'domain': [('district_id', '=', self.id)],
+            'context': {'default_district_id': self.id, 'default_state_id': self.state_id.id},
+        }
+
+    def action_view_applications(self):
+        self.ensure_one()
+        return {
+            'name': _('Applications - %s', self.name),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.member.application',
+            'view_mode': 'list,form',
+            'domain': [('district_id', '=', self.id)],
+            'context': {'default_district_id': self.id, 'default_state_id': self.state_id.id},
+        }
