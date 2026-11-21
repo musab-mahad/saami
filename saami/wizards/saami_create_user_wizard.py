@@ -44,7 +44,12 @@ class SaamiCreateUserWizard(models.TransientModel):
         if self.password:
             user_vals['password'] = self.password
 
-        user = User.create(user_vals)
+        user = User.with_context(
+            no_reset_password=bool(self.password or not self.send_email),
+            mail_create_nosubscribe=True,
+            mail_create_nolog=True,
+            signup_valid=False,
+        ).create(user_vals)
 
         # Link to application or member
         if self.application_id:
