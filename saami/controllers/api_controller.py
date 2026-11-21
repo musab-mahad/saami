@@ -8,6 +8,13 @@ from .jwt_utils import send_json, handle_cors, get_json_body, require_jwt
 _logger = logging.getLogger(__name__)
 
 
+def get_saami_bot_env():
+    """ Return request environment bound to Saami Bot (or OdooBot) for public actions. """
+    bot = request.env.ref('saami.user_saami_bot', raise_if_not_found=False) or request.env.ref('base.user_root')
+    company = bot.company_id or request.env['res.company'].sudo().search([], limit=1)
+    return request.env(user=bot, company=company)
+
+
 class SaamiApiController(http.Controller):
 
     # -------------------------------------------------------------------------
@@ -83,15 +90,16 @@ class SaamiApiController(http.Controller):
             return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account with this email already exists.'}, status=400)
 
         try:
-            company = request.env.company or request.env['res.company'].sudo().search([], limit=1)
+            bot_env = get_saami_bot_env()
+            company = bot_env.company
             state_id = int(data['state_id'])
             district_id = int(data['district_id'])
-            district_rec = request.env['saami.district'].sudo().browse(district_id)
+            district_rec = bot_env['saami.district'].browse(district_id)
             district_name = district_rec.name if district_rec.exists() else (data.get('district') or '')
 
             # 1. Create Partner
             full_name = f"{data['first_name']} {data['middle_name']} {data['last_name']}".strip()
-            partner = request.env['res.partner'].sudo().with_company(company).create({
+            partner = bot_env['res.partner'].create({
                 'name': full_name,
                 'email': email,
                 'phone': data['mobile'],
@@ -103,8 +111,8 @@ class SaamiApiController(http.Controller):
             })
 
             # 2. Create Portal User
-            portal_group = request.env.ref('base.group_portal')
-            user = Users.with_company(company).create({
+            portal_group = bot_env.ref('base.group_portal')
+            user = bot_env['res.users'].create({
                 'name': full_name,
                 'login': email,
                 'email': email,
@@ -146,10 +154,10 @@ class SaamiApiController(http.Controller):
                 'identity_file': data.get('identity_file'),
                 'state': 'pending_payment',
             }
-            application = request.env['saami.member.application'].sudo().with_company(company).create(app_vals)
+            application = bot_env['saami.member.application'].create(app_vals)
 
             # 4. Generate Registration Invoice
-            application.with_company(company).action_create_registration_invoice()
+            application.action_create_registration_invoice()
 
             return send_json({
                 'code': 'SUCCESS',

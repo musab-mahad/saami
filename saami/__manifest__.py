@@ -22,6 +22,7 @@ and capital contributions.
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/saami_bot_data.xml',
         'data/ir_sequence_data.xml',
         'data/saami_product_data.xml',
         'data/saami_location_data.xml',

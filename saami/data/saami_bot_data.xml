@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Saami Bot Partner -->
+        <record id="partner_saami_bot" model="res.partner">
+            <field name="name">Saami Bot</field>
+            <field name="email">bot@saami.local</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- Saami Bot User -->
+        <record id="user_saami_bot" model="res.users">
+            <field name="name">Saami Bot</field>
+            <field name="login">saami_bot</field>
+            <field name="email">bot@saami.local</field>
+            <field name="partner_id" ref="partner_saami_bot"/>
+            <field name="active" eval="True"/>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="company_ids" eval="[(6, 0, [ref('base.main_company')])]"/>
+            <field name="groups_id" eval="[(6, 0, [ref('base.group_system')])]"/>
+        </record>
+    </data>
+</odoo>
