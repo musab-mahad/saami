@@ -28,7 +28,9 @@
                             </div>
                         </setting>
                         <setting string="Google Sign-In" help="Google OAuth Client ID(s) from Google Cloud Console for mobile/web sign-in. Multiple IDs can be comma-separated.">
-                            <field name="saami_google_client_id" placeholder="e.g. 12345-web.apps.googleusercontent.com, 12345-android.apps.googleusercontent.com"/>
+                            <div class="w-100">
+                                <field name="saami_google_client_id" class="w-100" style="width: 100% !important;" placeholder="e.g. 12345-web.apps.googleusercontent.com, 12345-android.apps.googleusercontent.com"/>
+                            </div>
                             <div class="text-muted">
                                 Comma-separated Client IDs for Web, Android, and iOS apps
                             </div>
