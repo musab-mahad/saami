@@ -51,10 +51,10 @@ class SaamiMemberApplication(models.Model):
     kin1_address = fields.Char(string='Next of Kin 1 Address', required=True)
     kin1_mobile = fields.Char(string='Next of Kin 1 Mobile', required=True)
 
-    # Next of Kin 2
-    kin2_name = fields.Char(string='Next of Kin 2 Name', required=True)
-    kin2_address = fields.Char(string='Next of Kin 2 Address', required=True)
-    kin2_mobile = fields.Char(string='Next of Kin 2 Mobile', required=True)
+    # Next of Kin 2 (Optional)
+    kin2_name = fields.Char(string='Next of Kin 2 Name')
+    kin2_address = fields.Char(string='Next of Kin 2 Address')
+    kin2_mobile = fields.Char(string='Next of Kin 2 Mobile')
 
     # KYC Attachments
     photo = fields.Binary(string='Photo', attachment=True, required=True)

@@ -72,7 +72,7 @@ class SaamiApiController(http.Controller):
         if not data:
             return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
 
-        required_fields = ['first_name', 'middle_name', 'last_name', 'mother_name', 'mobile', 'email', 'password', 'date_of_birth', 'gender', 'education_level', 'country_id', 'state_id', 'district_id', 'residence_address', 'kin1_name', 'kin1_mobile', 'kin1_address', 'kin2_name', 'kin2_mobile', 'kin2_address']
+        required_fields = ['first_name', 'middle_name', 'last_name', 'mother_name', 'mobile', 'email', 'password', 'date_of_birth', 'gender', 'education_level', 'country_id', 'state_id', 'district_id', 'residence_address', 'kin1_name', 'kin1_mobile', 'kin1_address']
         missing = [f for f in required_fields if not data.get(f)]
         if missing:
             return send_json({'code': 'VALIDATION_ERROR', 'message': f"Missing required fields: {', '.join(missing)}"}, status=400)
