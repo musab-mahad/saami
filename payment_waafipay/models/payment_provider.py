@@ -35,6 +35,12 @@ class PaymentProvider(models.Model):
         help="Phone number in international format (e.g., 25261XXXXXX).",
     )
 
+    def _get_default_payment_method_codes(self):
+        default_codes = super()._get_default_payment_method_codes()
+        if self.code == 'waafipay':
+            default_codes.add('mobile_money')
+        return default_codes
+
     def _waafipay_get_api_url(self):
         """ Return the API URL based on the provider state. """
         if self.state == 'enabled':

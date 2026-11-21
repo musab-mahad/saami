@@ -204,12 +204,19 @@ class SaamiApiController(http.Controller):
         if not provider:
             return send_json({'code': 'CONFIG_ERROR', 'message': 'WaafiPay provider is not active.'}, status=500)
 
+        payment_method = provider.payment_method_ids[:1] or request.env['payment.method'].sudo().search([('code', '=', 'mobile_money')], limit=1)
+        if not payment_method:
+            payment_method = request.env['payment.method'].sudo().search([], limit=1)
+        if payment_method and payment_method not in provider.payment_method_ids:
+            provider.payment_method_ids = [(4, payment_method.id)]
+
         # Create payment.transaction
         reference = f"REG-{app.name}-{fields.Datetime.now().strftime('%Y%m%d%H%M%S')}"
         tx = request.env['payment.transaction'].sudo().create({
             'amount': invoice.amount_residual or invoice.amount_total,
             'currency_id': invoice.currency_id.id,
             'provider_id': provider.id,
+            'payment_method_id': payment_method.id,
             'reference': reference,
             'partner_id': user.partner_id.id,
             'saami_application_id': app.id,
@@ -264,11 +271,18 @@ class SaamiApiController(http.Controller):
         if not provider:
             return send_json({'code': 'CONFIG_ERROR', 'message': 'WaafiPay provider is not active.'}, status=500)
 
+        payment_method = provider.payment_method_ids[:1] or request.env['payment.method'].sudo().search([('code', '=', 'mobile_money')], limit=1)
+        if not payment_method:
+            payment_method = request.env['payment.method'].sudo().search([], limit=1)
+        if payment_method and payment_method not in provider.payment_method_ids:
+            provider.payment_method_ids = [(4, payment_method.id)]
+
         reference = f"CONTR-{member.name}-{fields.Datetime.now().strftime('%Y%m%d%H%M%S')}"
         tx = request.env['payment.transaction'].sudo().create({
             'amount': amount,
             'currency_id': member.currency_id.id,
             'provider_id': provider.id,
+            'payment_method_id': payment_method.id,
             'reference': reference,
             'partner_id': user.partner_id.id,
             'saami_tracker_id': tracker.id,
