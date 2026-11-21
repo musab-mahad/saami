@@ -46,13 +46,25 @@
                         </group>
                     </group>
                     <notebook>
+                        <page string="Contribution Transactions" name="transactions">
+                            <field name="transaction_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="date"/>
+                                    <field name="payment_method"/>
+                                    <field name="external_reference"/>
+                                    <field name="amount" widget="monetary" sum="Total Transactions" width="150px"/>
+                                    <field name="state" widget="badge" decoration-success="state == 'paid'" decoration-warning="state == 'pending'"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Linked Invoices / Receipts" name="invoices">
                             <field name="invoice_ids" readonly="1">
                                 <list>
                                     <field name="name"/>
                                     <field name="invoice_date"/>
-                                    <field name="amount_total" widget="monetary" sum="Total Invoiced"/>
-                                    <field name="amount_residual" widget="monetary" sum="Balance Due"/>
+                                    <field name="amount_total" widget="monetary" sum="Total Invoiced" width="150px"/>
+                                    <field name="amount_residual" widget="monetary" sum="Balance Due" width="150px"/>
                                     <field name="payment_state" widget="badge" decoration-success="payment_state in ('paid', 'in_payment')" decoration-warning="payment_state == 'partial'"/>
                                     <field name="state" widget="badge" decoration-success="state == 'posted'"/>
                                 </list>

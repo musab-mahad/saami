@@ -45,6 +45,11 @@ class SaamiContributionTracker(models.Model):
         currency_field='currency_id',
         help="Benchmark monthly capital contribution configured in Saami Products.",
     )
+    transaction_ids = fields.One2many(
+        'saami.contribution.transaction',
+        'tracker_id',
+        string='Contribution Transactions',
+    )
     actual_amount = fields.Monetary(
         string='Actual Paid',
         currency_field='currency_id',
@@ -87,15 +92,11 @@ class SaamiContributionTracker(models.Model):
         for rec in self:
             rec.month_name = rec.date.strftime('%B %Y') if rec.date else ''
 
-    @api.depends('invoice_ids', 'invoice_ids.payment_state', 'invoice_ids.amount_total')
+    @api.depends('transaction_ids.state', 'transaction_ids.amount')
     def _compute_actual_amount(self):
         for rec in self:
-            total_paid = 0.0
-            for inv in rec.invoice_ids:
-                if inv.state == 'posted':
-                    # Amount paid on the invoice
-                    total_paid += (inv.amount_total - inv.amount_residual)
-            rec.actual_amount = total_paid
+            paid_txs = rec.transaction_ids.filtered(lambda t: t.state == 'paid' and t.amount > 0)
+            rec.actual_amount = sum(paid_txs.mapped('amount'))
 
     @api.depends('actual_amount', 'expected_amount')
     def _compute_state(self):

@@ -82,6 +82,11 @@ class SaamiMember(models.Model):
         'member_id',
         string='Contribution Trackers',
     )
+    transaction_ids = fields.One2many(
+        'saami.contribution.transaction',
+        'member_id',
+        string='Contribution Transactions',
+    )
     total_contributions = fields.Monetary(
         string='Total Contributions',
         compute='_compute_total_contributions',

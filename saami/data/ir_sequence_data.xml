@@ -18,5 +18,14 @@
             <field name="padding">5</field>
             <field name="company_id" eval="False"/>
         </record>
+
+        <!-- Sequence for Contribution Transactions -->
+        <record id="seq_saami_contribution_transaction" model="ir.sequence">
+            <field name="name">Saami Contribution Transaction Sequence</field>
+            <field name="code">saami.contribution.transaction</field>
+            <field name="prefix">TX-</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
     </data>
 </odoo>

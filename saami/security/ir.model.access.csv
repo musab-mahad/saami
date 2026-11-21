@@ -3,4 +3,5 @@ access_saami_member_application_user,saami.member.application.user,model_saami_m
 access_saami_member_user,saami.member.user,model_saami_member,base.group_user,1,1,1,1
 access_saami_product_user,saami.product.user,model_saami_product,base.group_user,1,1,1,1
 access_saami_contribution_tracker_user,saami.contribution.tracker.user,model_saami_contribution_tracker,base.group_user,1,1,1,1
+access_saami_contribution_transaction_user,saami.contribution.transaction.user,model_saami_contribution_transaction,base.group_user,1,1,1,1
 access_saami_create_user_wizard_user,saami.create.user.wizard.user,model_saami_create_user_wizard,base.group_user,1,1,1,1
