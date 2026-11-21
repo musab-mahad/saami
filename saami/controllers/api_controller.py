@@ -12,7 +12,7 @@ def get_saami_bot_env():
     """ Return request environment bound to Saami Bot (or OdooBot) for public actions. """
     bot = request.env.ref('saami.user_saami_bot', raise_if_not_found=False) or request.env.ref('base.user_root')
     company = bot.company_id or request.env['res.company'].sudo().search([], limit=1)
-    return request.env(user=bot, company=company)
+    return request.env(user=bot.id, su=True).with_company(company)
 
 
 class SaamiApiController(http.Controller):
@@ -169,7 +169,7 @@ class SaamiApiController(http.Controller):
             }, status=201)
 
         except Exception as e:
-            _logger.error("Registration error: %s", str(e))
+            _logger.error("Registration error: %s", str(e), exc_info=True)
             return send_json({'code': 'SERVER_ERROR', 'message': str(e)}, status=500)
 
     # -------------------------------------------------------------------------
