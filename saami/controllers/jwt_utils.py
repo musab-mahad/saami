@@ -28,14 +28,15 @@ def get_jwt_secret():
 
 def send_json(data, status=200):
     """
-    Standard JSON response helper with CORS headers.
+    Standard JSON response helper with dynamic CORS headers.
     """
-    origin = request.httprequest.headers.get('Origin', '*')
+    origin = request.httprequest.headers.get('Origin')
     headers = [
         ('Content-Type', 'application/json'),
-        ('Access-Control-Allow-Origin', origin),
-        ('Access-Control-Allow-Credentials', 'true'),
+        ('Access-Control-Allow-Origin', origin or '*'),
     ]
+    if origin:
+        headers.append(('Access-Control-Allow-Credentials', 'true'))
     return request.make_response(json.dumps(data), headers=headers, status=status)
 
 
@@ -43,19 +44,28 @@ def handle_cors(methods=None):
     """
     Handle browser CORS preflight (OPTIONS).
     Returns response if OPTIONS request, otherwise None.
+    Dynamically approves requested headers and standard HTTP methods.
     """
-    if methods is None:
-        methods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-
     if request.httprequest.method == 'OPTIONS':
-        origin = request.httprequest.headers.get('Origin', '*')
+        origin = request.httprequest.headers.get('Origin')
+        req_headers = request.httprequest.headers.get('Access-Control-Request-Headers')
+        allowed_headers = req_headers or 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
+
+        allowed_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+        if methods:
+            for m in methods:
+                if m not in allowed_methods:
+                    allowed_methods.append(m)
+
         headers = [
-            ('Access-Control-Allow-Origin', origin),
-            ('Access-Control-Allow-Methods', ', '.join(methods)),
-            ('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With'),
-            ('Access-Control-Allow-Credentials', 'true'),
+            ('Access-Control-Allow-Origin', origin or '*'),
+            ('Access-Control-Allow-Methods', ', '.join(allowed_methods)),
+            ('Access-Control-Allow-Headers', allowed_headers),
             ('Access-Control-Max-Age', '86400'),
         ]
+        if origin:
+            headers.append(('Access-Control-Allow-Credentials', 'true'))
+
         return request.make_response('', headers=headers, status=200)
     return None
 
