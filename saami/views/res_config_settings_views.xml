@@ -17,22 +17,16 @@
             <xpath expr="//form" position="inside">
                 <app data-string="Saami" string="Saami" name="saami">
                     <block title="API &amp; Authentication" id="saami_api_settings">
-                        <setting string="JWT Authentication" help="Configure the secret key and token lifetime for mobile and web APIs.">
+                        <setting string="JWT Authentication" help="Secret key and token validity duration for API requests.">
                             <field name="saami_jwt_secret" password="True"/>
-                            <div class="text-muted">
-                                Generated secret token for API signing
-                            </div>
                             <div class="mt-2">
                                 <label for="saami_jwt_expiration_hours" string="Token Expiration (Hours)"/>
                                 <field name="saami_jwt_expiration_hours" class="oe_inline"/>
                             </div>
                         </setting>
-                        <setting string="Google Sign-In" help="Google OAuth Client ID(s) from Google Cloud Console for mobile/web sign-in. Multiple IDs can be comma-separated.">
+                        <setting string="Google Sign-In" help="Multiple IDs can be comma-separated.">
                             <div class="w-100">
-                                <field name="saami_google_client_id" class="w-100" style="width: 100% !important;" placeholder="e.g. 12345-web.apps.googleusercontent.com, 12345-android.apps.googleusercontent.com"/>
-                            </div>
-                            <div class="text-muted">
-                                Comma-separated Client IDs for Web, Android, and iOS apps
+                                <field name="saami_google_client_id" class="w-100" style="width: 100% !important;" placeholder="e.g. 12345-web.apps.googleusercontent.com"/>
                             </div>
                         </setting>
                     </block>
