@@ -4,4 +4,5 @@ from . import saami_member_application
 from . import saami_product
 from . import saami_contribution_tracker
 from . import saami_contribution_transaction
+from . import account_move
 from . import res_config_settings
