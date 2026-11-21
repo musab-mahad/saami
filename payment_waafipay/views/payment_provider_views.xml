@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="payment_provider_form" model="ir.ui.view">
+        <field name="name">WaafiPay Provider Form</field>
+        <field name="model">payment.provider</field>
+        <field name="inherit_id" ref="payment.payment_provider_form"/>
+        <field name="arch" type="xml">
+            <xpath expr='//group[@name="provider_credentials"]' position='inside'>
+                <group invisible="code != 'waafipay'">
+                    <field name="waafipay_merchant_uid" password="True"/>
+                    <field name="waafipay_api_user_id" password="True"/>
+                    <field name="waafipay_api_key" password="True"/>
+                    <field name="waafipay_webhook_url" widget="url"/>
+                </group>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Developer Tools" invisible="code != 'waafipay'">
+                    <group string="WaafiPay Test Tools">
+                        <field name="waafipay_test_phone" placeholder="25261XXXXXX"/>
+                        <button name="button_test_ussd_push" 
+                                type="object" 
+                                string="Trigger Test USSD Push" 
+                                class="btn-primary" 
+                                icon="fa-mobile"
+                                colspan="2"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
