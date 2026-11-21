@@ -264,7 +264,7 @@ class SaamiApiController(http.Controller):
                 'member_id': member.id,
                 'date': today_month,
                 'expected_amount': prod_config.amount if prod_config else amount,
-                'currency_id': prod_config.currency_id.id if prod_config else member.currency_id.id,
+                'currency_id': member.currency_id.id or (prod_config.currency_id.id if prod_config else request.env.company.currency_id.id),
             })
 
         provider = request.env['payment.provider'].sudo().search([('code', '=', 'waafipay'), ('state', '!=', 'disabled')], limit=1)
