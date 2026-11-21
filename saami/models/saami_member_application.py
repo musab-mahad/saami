@@ -246,11 +246,12 @@ class SaamiMemberApplication(models.Model):
         self.ensure_one()
         if not self.user_id:
             return
+        view = self.env.ref('base.view_users_form', raise_if_not_found=False)
         return {
-            'name': _('Portal User'),
+            'name': _('User Account'),
             'type': 'ir.actions.act_window',
             'res_model': 'res.users',
-            'view_mode': 'form',
+            'views': [(view.id, 'form')] if view else [(False, 'form')],
             'res_id': self.user_id.id,
             'target': 'current',
         }
