@@ -73,4 +73,18 @@
               parent="menu_saami_configuration"
               action="action_saami_product"
               sequence="10"/>
+
+    <!-- Regions Menu -->
+    <menuitem id="menu_saami_region"
+              name="Regions"
+              parent="menu_saami_configuration"
+              action="action_saami_region"
+              sequence="20"/>
+
+    <!-- Districts Menu -->
+    <menuitem id="menu_saami_district"
+              name="Districts"
+              parent="menu_saami_configuration"
+              action="action_saami_district"
+              sequence="30"/>
 </odoo>

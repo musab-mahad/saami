@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================= -->
+    <!-- DISTRICTS (saami.district) VIEWS                              -->
+    <!-- ============================================================= -->
+    <record id="view_saami_district_tree" model="ir.ui.view">
+        <field name="name">saami.district.list</field>
+        <field name="model">saami.district</field>
+        <field name="arch" type="xml">
+            <list string="Districts" editable="bottom">
+                <field name="name"/>
+                <field name="state_id" options="{'no_create': True}"/>
+                <field name="code"/>
+                <field name="member_count" string="Active Members"/>
+                <field name="application_count" string="Applications"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_saami_district_form" model="ir.ui.view">
+        <field name="name">saami.district.form</field>
+        <field name="model">saami.district</field>
+        <field name="arch" type="xml">
+            <form string="District">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="District Name"/>
+                        <h1>
+                            <field name="name" placeholder="e.g. Hodan"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="state_id" options="{'no_create': True}"/>
+                            <field name="code"/>
+                        </group>
+                        <group>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="member_count" readonly="1"/>
+                            <field name="application_count" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_saami_district_search" model="ir.ui.view">
+        <field name="name">saami.district.search</field>
+        <field name="model">saami.district</field>
+        <field name="arch" type="xml">
+            <search string="Search Districts">
+                <field name="name"/>
+                <field name="state_id"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Region" name="group_by_region" context="{'group_by': 'state_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_saami_district" model="ir.actions.act_window">
+        <field name="name">Districts</field>
+        <field name="res_model">saami.district</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_by_region': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Add a new district!
+            </p>
+            <p>
+                Manage official Somali districts categorized under their respective home regions.
+            </p>
+        </field>
+    </record>
+
+    <!-- ============================================================= -->
+    <!-- REGIONS (res.country.state filtered to Somalia)               -->
+    <!-- ============================================================= -->
+    <record id="action_saami_region" model="ir.actions.act_window">
+        <field name="name">Regions</field>
+        <field name="res_model">res.country.state</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('country_id.code', '=', 'SO')]</field>
+        <field name="context">{'default_country_id': ref('base.so')}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Add a new region!
+            </p>
+            <p>
+                Manage Federal Member States and home regions for Somalia.
+            </p>
+        </field>
+    </record>
+
+</odoo>

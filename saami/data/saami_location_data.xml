@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- ============================================================= -->
+        <!-- SOMALI FEDERAL MEMBER STATES / REGIONS (res.country.state)     -->
+        <!-- ============================================================= -->
+        <record id="state_so_bn" model="res.country.state">
+            <field name="name">Banaadir</field>
+            <field name="code">BN</field>
+            <field name="country_id" ref="base.so"/>
+        </record>
+
+        <record id="state_so_pl" model="res.country.state">
+            <field name="name">Puntland</field>
+            <field name="code">PL</field>
+            <field name="country_id" ref="base.so"/>
+        </record>
+
+        <record id="state_so_jl" model="res.country.state">
+            <field name="name">Jubaland</field>
+            <field name="code">JL</field>
+            <field name="country_id" ref="base.so"/>
+        </record>
+
+        <record id="state_so_sw" model="res.country.state">
+            <field name="name">South West State</field>
+            <field name="code">SW</field>
+            <field name="country_id" ref="base.so"/>
+        </record>
+
+        <record id="state_so_gm" model="res.country.state">
+            <field name="name">Galmudug</field>
+            <field name="code">GM</field>
+            <field name="country_id" ref="base.so"/>
+        </record>
+
+        <record id="state_so_hs" model="res.country.state">
+            <field name="name">Hirshabelle</field>
+            <field name="code">HS</field>
+            <field name="country_id" ref="base.so"/>
+        </record>
+
+        <record id="state_so_sl" model="res.country.state">
+            <field name="name">Somaliland</field>
+            <field name="code">SL</field>
+            <field name="country_id" ref="base.so"/>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- DISTRICTS (saami.district)                                     -->
+        <!-- ============================================================= -->
+
+        <!-- Banaadir / Mogadishu (All 17 Official Districts) -->
+        <record id="dist_bn_hodan" model="saami.district">
+            <field name="name">Hodan</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_wadajir" model="saami.district">
+            <field name="name">Wadajir (Madina)</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_waberi" model="saami.district">
+            <field name="name">Waberi</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_hamarweyne" model="saami.district">
+            <field name="name">Hamar Weyne</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_hamarjajab" model="saami.district">
+            <field name="name">Hamar Jajab</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_hawlwadag" model="saami.district">
+            <field name="name">Hawl Wadag</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_boondheere" model="saami.district">
+            <field name="name">Boondheere</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_shangaani" model="saami.district">
+            <field name="name">Shangaani</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_abdiaziz" model="saami.district">
+            <field name="name">Abdiaziz</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_shibis" model="saami.district">
+            <field name="name">Shibis</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_yaqshid" model="saami.district">
+            <field name="name">Yaqshid</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_karan" model="saami.district">
+            <field name="name">Karan</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_daynile" model="saami.district">
+            <field name="name">Daynile</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_heliwa" model="saami.district">
+            <field name="name">Heliwa (Huriwa)</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_dharkenley" model="saami.district">
+            <field name="name">Dharkenley</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_kahda" model="saami.district">
+            <field name="name">Kahda</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+        <record id="dist_bn_darussalam" model="saami.district">
+            <field name="name">Darussalam</field>
+            <field name="state_id" ref="state_so_bn"/>
+        </record>
+
+        <!-- Puntland Districts -->
+        <record id="dist_pl_garowe" model="saami.district">
+            <field name="name">Garowe</field>
+            <field name="state_id" ref="state_so_pl"/>
+        </record>
+        <record id="dist_pl_bosaso" model="saami.district">
+            <field name="name">Bosaso</field>
+            <field name="state_id" ref="state_so_pl"/>
+        </record>
+        <record id="dist_pl_galkayo" model="saami.district">
+            <field name="name">Galkayo North</field>
+            <field name="state_id" ref="state_so_pl"/>
+        </record>
+        <record id="dist_pl_qardho" model="saami.district">
+            <field name="name">Qardho</field>
+            <field name="state_id" ref="state_so_pl"/>
+        </record>
+        <record id="dist_pl_burtinle" model="saami.district">
+            <field name="name">Burtinle</field>
+            <field name="state_id" ref="state_so_pl"/>
+        </record>
+        <record id="dist_pl_eyl" model="saami.district">
+            <field name="name">Eyl</field>
+            <field name="state_id" ref="state_so_pl"/>
+        </record>
+        <record id="dist_pl_badhan" model="saami.district">
+            <field name="name">Badhan</field>
+            <field name="state_id" ref="state_so_pl"/>
+        </record>
+
+        <!-- Jubaland Districts -->
+        <record id="dist_jl_kismayo" model="saami.district">
+            <field name="name">Kismayo</field>
+            <field name="state_id" ref="state_so_jl"/>
+        </record>
+        <record id="dist_jl_afmadow" model="saami.district">
+            <field name="name">Afmadow</field>
+            <field name="state_id" ref="state_so_jl"/>
+        </record>
+        <record id="dist_jl_dhobley" model="saami.district">
+            <field name="name">Dhobley</field>
+            <field name="state_id" ref="state_so_jl"/>
+        </record>
+        <record id="dist_jl_luuq" model="saami.district">
+            <field name="name">Luuq</field>
+            <field name="state_id" ref="state_so_jl"/>
+        </record>
+        <record id="dist_jl_garbaharey" model="saami.district">
+            <field name="name">Garbaharey</field>
+            <field name="state_id" ref="state_so_jl"/>
+        </record>
+        <record id="dist_jl_bardhere" model="saami.district">
+            <field name="name">Bardhere</field>
+            <field name="state_id" ref="state_so_jl"/>
+        </record>
+        <record id="dist_jl_beledhawo" model="saami.district">
+            <field name="name">Beled Hawo</field>
+            <field name="state_id" ref="state_so_jl"/>
+        </record>
+
+        <!-- South West State Districts -->
+        <record id="dist_sw_baidoa" model="saami.district">
+            <field name="name">Baidoa</field>
+            <field name="state_id" ref="state_so_sw"/>
+        </record>
+        <record id="dist_sw_burhakaba" model="saami.district">
+            <field name="name">Burhakaba</field>
+            <field name="state_id" ref="state_so_sw"/>
+        </record>
+        <record id="dist_sw_afgooye" model="saami.district">
+            <field name="name">Afgooye</field>
+            <field name="state_id" ref="state_so_sw"/>
+        </record>
+        <record id="dist_sw_merka" model="saami.district">
+            <field name="name">Merka</field>
+            <field name="state_id" ref="state_so_sw"/>
+        </record>
+        <record id="dist_sw_wanlaweyn" model="saami.district">
+            <field name="name">Wanlaweyn</field>
+            <field name="state_id" ref="state_so_sw"/>
+        </record>
+        <record id="dist_sw_barawe" model="saami.district">
+            <field name="name">Barawe</field>
+            <field name="state_id" ref="state_so_sw"/>
+        </record>
+        <record id="dist_sw_xudur" model="saami.district">
+            <field name="name">Xudur</field>
+            <field name="state_id" ref="state_so_sw"/>
+        </record>
+
+        <!-- Galmudug Districts -->
+        <record id="dist_gm_dhusamareb" model="saami.district">
+            <field name="name">Dhusamareb</field>
+            <field name="state_id" ref="state_so_gm"/>
+        </record>
+        <record id="dist_gm_galkayo" model="saami.district">
+            <field name="name">Galkayo South</field>
+            <field name="state_id" ref="state_so_gm"/>
+        </record>
+        <record id="dist_gm_adaado" model="saami.district">
+            <field name="name">Adaado</field>
+            <field name="state_id" ref="state_so_gm"/>
+        </record>
+        <record id="dist_gm_abudwaq" model="saami.district">
+            <field name="name">Abudwaq</field>
+            <field name="state_id" ref="state_so_gm"/>
+        </record>
+        <record id="dist_gm_hobyo" model="saami.district">
+            <field name="name">Hobyo</field>
+            <field name="state_id" ref="state_so_gm"/>
+        </record>
+
+        <!-- Hirshabelle Districts -->
+        <record id="dist_hs_beledweyne" model="saami.district">
+            <field name="name">Beledweyne</field>
+            <field name="state_id" ref="state_so_hs"/>
+        </record>
+        <record id="dist_hs_jowhar" model="saami.district">
+            <field name="name">Jowhar</field>
+            <field name="state_id" ref="state_so_hs"/>
+        </record>
+        <record id="dist_hs_balad" model="saami.district">
+            <field name="name">Bal'ad</field>
+            <field name="state_id" ref="state_so_hs"/>
+        </record>
+        <record id="dist_hs_buloburde" model="saami.district">
+            <field name="name">Buloburde</field>
+            <field name="state_id" ref="state_so_hs"/>
+        </record>
+
+        <!-- Somaliland Districts -->
+        <record id="dist_sl_hargeisa" model="saami.district">
+            <field name="name">Hargeisa</field>
+            <field name="state_id" ref="state_so_sl"/>
+        </record>
+        <record id="dist_sl_borama" model="saami.district">
+            <field name="name">Borama</field>
+            <field name="state_id" ref="state_so_sl"/>
+        </record>
+        <record id="dist_sl_berbera" model="saami.district">
+            <field name="name">Berbera</field>
+            <field name="state_id" ref="state_so_sl"/>
+        </record>
+        <record id="dist_sl_burao" model="saami.district">
+            <field name="name">Burao</field>
+            <field name="state_id" ref="state_so_sl"/>
+        </record>
+        <record id="dist_sl_erigavo" model="saami.district">
+            <field name="name">Erigavo</field>
+            <field name="state_id" ref="state_so_sl"/>
+        </record>
+        <record id="dist_sl_las_anod" model="saami.district">
+            <field name="name">Las Anod</field>
+            <field name="state_id" ref="state_so_sl"/>
+        </record>
+    </data>
+</odoo>

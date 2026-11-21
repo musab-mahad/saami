@@ -11,6 +11,50 @@ _logger = logging.getLogger(__name__)
 class SaamiApiController(http.Controller):
 
     # -------------------------------------------------------------------------
+    # 0. METADATA: SOMALI REGIONS & DISTRICTS
+    # -------------------------------------------------------------------------
+    @http.route('/api/saami/locations', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_locations(self):
+        """
+        Public endpoint returning official Somali regions and their districts for frontend selection.
+        """
+        preflight = handle_cors(['GET', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        try:
+            State = request.env['res.country.state'].sudo()
+            somalia_states = State.search([('country_id.code', '=', 'SO')], order='name asc')
+
+            District = request.env['saami.district'].sudo()
+            all_districts = District.search([('active', '=', True)], order='name asc')
+
+            dist_by_state = {}
+            for d in all_districts:
+                dist_by_state.setdefault(d.state_id.id, []).append({
+                    'id': d.id,
+                    'name': d.name,
+                    'code': d.code or '',
+                })
+
+            regions_data = []
+            for s in somalia_states:
+                regions_data.append({
+                    'id': s.id,
+                    'name': s.name,
+                    'code': s.code,
+                    'districts': dist_by_state.get(s.id, []),
+                })
+
+            return send_json({
+                'code': 'SUCCESS',
+                'regions': regions_data,
+            })
+        except Exception as e:
+            _logger.error("Locations error: %s", str(e))
+            return send_json({'code': 'SERVER_ERROR', 'message': str(e)}, status=500)
+
+    # -------------------------------------------------------------------------
     # 1. PUBLIC REGISTRATION
     # -------------------------------------------------------------------------
     @http.route('/api/saami/register', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
@@ -28,7 +72,7 @@ class SaamiApiController(http.Controller):
         if not data:
             return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
 
-        required_fields = ['first_name', 'middle_name', 'last_name', 'mother_name', 'mobile', 'email', 'password', 'date_of_birth', 'gender', 'education_level', 'country_id', 'district', 'residence_address', 'kin1_name', 'kin1_mobile', 'kin1_address', 'kin2_name', 'kin2_mobile', 'kin2_address']
+        required_fields = ['first_name', 'middle_name', 'last_name', 'mother_name', 'mobile', 'email', 'password', 'date_of_birth', 'gender', 'education_level', 'country_id', 'state_id', 'district_id', 'residence_address', 'kin1_name', 'kin1_mobile', 'kin1_address', 'kin2_name', 'kin2_mobile', 'kin2_address']
         missing = [f for f in required_fields if not data.get(f)]
         if missing:
             return send_json({'code': 'VALIDATION_ERROR', 'message': f"Missing required fields: {', '.join(missing)}"}, status=400)
@@ -39,6 +83,11 @@ class SaamiApiController(http.Controller):
             return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account with this email already exists.'}, status=400)
 
         try:
+            state_id = int(data['state_id'])
+            district_id = int(data['district_id'])
+            district_rec = request.env['saami.district'].sudo().browse(district_id)
+            district_name = district_rec.name if district_rec.exists() else (data.get('district') or '')
+
             # 1. Create Partner
             full_name = f"{data['first_name']} {data['middle_name']} {data['last_name']}".strip()
             partner = request.env['res.partner'].sudo().create({
@@ -47,8 +96,8 @@ class SaamiApiController(http.Controller):
                 'phone': data['mobile'],
                 'street': data['residence_address'],
                 'country_id': int(data['country_id']),
-                'state_id': int(data['state_id']) if data.get('state_id') else False,
-                'city': data['district'],
+                'state_id': state_id,
+                'city': district_name,
             })
 
             # 2. Create Portal User
@@ -76,8 +125,9 @@ class SaamiApiController(http.Controller):
                 'gender': data['gender'],
                 'education_level': data['education_level'],
                 'country_id': int(data['country_id']),
-                'state_id': int(data['state_id']) if data.get('state_id') else False,
-                'district': data['district'],
+                'state_id': state_id,
+                'district_id': district_id,
+                'district': district_name,
                 'residence_address': data['residence_address'],
                 'bank_name': data.get('bank_name'),
                 'bank_address': data.get('bank_address'),

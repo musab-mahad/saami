@@ -10,7 +10,7 @@
                 <field name="full_name"/>
                 <field name="mobile"/>
                 <field name="email"/>
-                <field name="district"/>
+                <field name="district_id"/>
                 <field name="state_id"/>
                 <field name="total_contributions" widget="monetary" sum="Total Contributions" width="150px"/>
                 <field name="currency_id" column_invisible="True"/>
@@ -57,7 +57,7 @@
                             <field name="email"/>
                             <field name="country_id" options="{'no_open': True, 'no_create': True}"/>
                             <field name="state_id" options="{'no_open': True, 'no_create': True}"/>
-                            <field name="district"/>
+                            <field name="district_id" options="{'no_open': True, 'no_create': True}"/>
                             <field name="residence_address"/>
                         </group>
                     </group>
@@ -130,7 +130,8 @@
                 <field name="full_name" string="Member Name"/>
                 <field name="mobile"/>
                 <field name="email"/>
-                <field name="district"/>
+                <field name="state_id"/>
+                <field name="district_id"/>
                 <filter name="filter_active" string="Active" domain="[('state', '=', 'active')]"/>
                 <filter name="filter_suspended" string="Suspended" domain="[('state', '=', 'suspended')]"/>
                 <filter name="filter_terminated" string="Terminated" domain="[('state', '=', 'terminated')]"/>
@@ -139,8 +140,8 @@
                 <filter name="filter_female" string="Female" domain="[('gender', '=', 'female')]"/>
                 <group expand="0" string="Group By">
                     <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
-                    <filter name="group_by_district" string="District" context="{'group_by': 'district'}"/>
                     <filter name="group_by_state_id" string="Region" context="{'group_by': 'state_id'}"/>
+                    <filter name="group_by_district" string="District" context="{'group_by': 'district_id'}"/>
                 </group>
             </search>
         </field>

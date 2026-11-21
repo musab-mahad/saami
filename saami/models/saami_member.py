@@ -47,9 +47,10 @@ class SaamiMember(models.Model):
     education_level = fields.Char(string='Education Level')
 
     # Location
-    country_id = fields.Many2one('res.country', string='Country', required=True)
-    state_id = fields.Many2one('res.country.state', string='Region')
-    district = fields.Char(string='District', required=True)
+    country_id = fields.Many2one('res.country', string='Country of Residence', required=True)
+    state_id = fields.Many2one('res.country.state', string='Home Region', domain="[('country_id.code', '=', 'SO')]")
+    district_id = fields.Many2one('saami.district', string='Home District', domain="[('state_id', '=?', state_id)]")
+    district = fields.Char(string='District')
     residence_address = fields.Text(string='Address of Residence')
 
     # Bank Details

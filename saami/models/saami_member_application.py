@@ -35,9 +35,10 @@ class SaamiMemberApplication(models.Model):
     education_level = fields.Char(string='Education Level', required=True)
 
     # Address / Location
-    country_id = fields.Many2one('res.country', string='Country', required=True)
-    state_id = fields.Many2one('res.country.state', string='Region', domain="[('country_id', '=?', country_id)]")
-    district = fields.Char(string='District', required=True)
+    country_id = fields.Many2one('res.country', string='Country of Residence', required=True)
+    state_id = fields.Many2one('res.country.state', string='Home Region', domain="[('country_id.code', '=', 'SO')]", required=True)
+    district_id = fields.Many2one('saami.district', string='Home District', domain="[('state_id', '=?', state_id)]", required=True)
+    district = fields.Char(string='District')
     residence_address = fields.Text(string='Address of Residence', required=True)
 
     # Bank Details (optional)
@@ -222,7 +223,8 @@ class SaamiMemberApplication(models.Model):
                 'education_level': rec.education_level,
                 'country_id': rec.country_id.id,
                 'state_id': rec.state_id.id if rec.state_id else False,
-                'district': rec.district,
+                'district_id': rec.district_id.id if rec.district_id else False,
+                'district': rec.district_id.name if rec.district_id else (rec.district or ''),
                 'residence_address': rec.residence_address,
                 'bank_name': rec.bank_name,
                 'bank_address': rec.bank_address,
