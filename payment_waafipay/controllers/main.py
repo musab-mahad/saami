@@ -20,6 +20,11 @@ class WaafiPayController(http.Controller):
         if not data:
             return request.make_json_response({'status': 'error', 'message': 'No data received'}, status=400)
 
+        # Handle WaafiPay webhook registration / test ping
+        if data.get('event') == 'webhook.test':
+            _logger.info("WaafiPay: Received and handled webhook.test validation ping.")
+            return request.make_json_response({'status': 'OK', 'message': 'WaafiPay webhook validation ping received'}, status=200)
+
         try:
             tx_sudo = request.env['payment.transaction'].sudo()._get_tx_from_notification_data('waafipay', data)
             tx_sudo._handle_notification_data('waafipay', data)
