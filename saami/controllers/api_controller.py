@@ -459,14 +459,24 @@ class SaamiApiController(http.Controller):
         List all contribution and registration transactions for this user.
         """
         member = request.env['saami.member'].sudo().search([('partner_id', '=', user.partner_id.id)], limit=1)
+        app = request.env['saami.member.application'].sudo().search([
+            '|', ('user_id', '=', user.id), ('partner_id', '=', user.partner_id.id)
+        ], limit=1)
         Tx = request.env['saami.contribution.transaction'].sudo()
 
-        domain = [
-            '|', '|',
-            ('partner_id', '=', user.partner_id.id),
-            ('member_id', '=', member.id if member else False),
-            ('application_id.partner_id', '=', user.partner_id.id),
-        ]
+        conditions = [('partner_id', '=', user.partner_id.id)]
+        if member:
+            conditions.append(('member_id', '=', member.id))
+        if app:
+            conditions.append(('application_id', '=', app.id))
+
+        if len(conditions) == 1:
+            domain = conditions
+        elif len(conditions) == 2:
+            domain = ['|'] + conditions
+        else:
+            domain = ['|', '|'] + conditions
+
         transactions = Tx.search(domain, order='date desc, id desc')
 
         tx_list = []
