@@ -134,6 +134,7 @@ def generate_jwt(user, extra_payload=None, expires_in_hours=None):
         'uid': user.id,
         'login': user.login,
         'partner_id': user.partner_id.id,
+        'token_version': user.saami_token_version or 1,
         'iat': datetime.now(),
         'exp': datetime.now() + timedelta(hours=expires_in_hours),
     }
@@ -182,6 +183,8 @@ def get_current_user():
     user = request.env['res.users'].sudo().browse(uid)
     if not user.exists() or not user.active:
         return None
+    if payload.get('token_version') != (user.saami_token_version or 1):
+        return None
 
     # Switch Odoo request env to authenticated user
     request.update_env(user=user.id)
@@ -193,7 +196,8 @@ def require_jwt(f):
     Decorator to protect API endpoints:
     1. Handles CORS preflight automatically.
     2. Validates Bearer token.
-    3. Injects validated `user` as first parameter to the endpoint method.
+    3. Blocks suspended members.
+    4. Injects validated `user` as first parameter to the endpoint method.
     """
     @wraps(f)
     def wrapper(self, *args, **kwargs):
@@ -207,6 +211,13 @@ def require_jwt(f):
                 'code': 'UNAUTHORIZED',
                 'message': 'Valid authorization token is required.',
             }, status=401)
+
+        member = request.env['saami.member'].sudo().search([('partner_id', '=', user.partner_id.id)], limit=1)
+        if member and member.state == 'suspended':
+            return send_json({
+                'code': 'MEMBER_SUSPENDED',
+                'message': 'Your membership has been suspended. Please contact support.',
+            }, status=403)
 
         return f(self, user, *args, **kwargs)
     return wrapper

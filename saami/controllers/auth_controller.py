@@ -305,7 +305,12 @@ class SaamiAuthController(http.Controller):
         application_number = None
 
         if member:
-            status = member.state  # 'active', 'suspended', 'terminated'
+            if member.state == 'suspended':
+                return send_json({
+                    'code': 'MEMBER_SUSPENDED',
+                    'message': 'Your membership has been suspended. Please contact support.',
+                }, status=403)
+            status = member.state
             member_number = member.name
         elif application:
             status = application.state  # 'draft', 'pending_payment', 'pending_approval', etc.

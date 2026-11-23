@@ -5,7 +5,7 @@
         <field name="name">saami.member.list</field>
         <field name="model">saami.member</field>
         <field name="arch" type="xml">
-            <list string="Members">
+            <list string="Members" delete="false">
                 <field name="name"/>
                 <field name="full_name"/>
                 <field name="mobile"/>
@@ -14,7 +14,7 @@
                 <field name="state_id"/>
                 <field name="total_contributions" widget="monetary" sum="Total Contributions" width="150px"/>
                 <field name="currency_id" column_invisible="True"/>
-                <field name="state" widget="badge" decoration-success="state == 'active'" decoration-warning="state == 'suspended'" decoration-danger="state == 'terminated'"/>
+                <field name="state" widget="badge" decoration-success="state == 'active'" decoration-warning="state == 'suspended'"/>
             </list>
         </field>
     </record>
@@ -24,14 +24,14 @@
         <field name="name">saami.member.form</field>
         <field name="model">saami.member</field>
         <field name="arch" type="xml">
-            <form string="Cooperative Member">
+            <form string="Cooperative Member" delete="false">
                 <header>
                     <button name="action_activate" string="Activate" type="object" class="oe_highlight" invisible="state == 'active'"/>
                     <button name="action_suspend" string="Suspend" type="object" invisible="state != 'active'"/>
-                    <button name="action_terminate" string="Terminate" type="object" invisible="state == 'terminated'"/>
-                    <field name="state" widget="statusbar" statusbar_visible="active,suspended,terminated"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,suspended"/>
                 </header>
                 <sheet>
+                    <widget name="web_ribbon" title="Suspended" bg_color="text-bg-danger" invisible="state != 'suspended'"/>
                     <field name="currency_id" invisible="1"/>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_contributions" type="object" class="oe_stat_button" icon="fa-money">
@@ -153,7 +153,6 @@
                 <field name="district_id"/>
                 <filter name="filter_active" string="Active" domain="[('state', '=', 'active')]"/>
                 <filter name="filter_suspended" string="Suspended" domain="[('state', '=', 'suspended')]"/>
-                <filter name="filter_terminated" string="Terminated" domain="[('state', '=', 'terminated')]"/>
                 <separator/>
                 <filter name="filter_male" string="Male" domain="[('gender', '=', 'male')]"/>
                 <filter name="filter_female" string="Female" domain="[('gender', '=', 'female')]"/>
@@ -179,6 +178,19 @@
             <p>
                 Approved applicants automatically become members of the cooperative here.
             </p>
+        </field>
+    </record>
+
+    <!-- Show Suspended Ribbon on User Form -->
+    <record id="view_users_form_saami_suspended" model="ir.ui.view">
+        <field name="name">res.users.form.saami.suspended</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <field name="saami_is_suspended" invisible="1"/>
+                <widget name="web_ribbon" title="Suspended" bg_color="text-bg-danger" invisible="not saami_is_suspended"/>
+            </xpath>
         </field>
     </record>
 </odoo>

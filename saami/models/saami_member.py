@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError, ValidationError
 
 
 class SaamiMember(models.Model):
@@ -82,7 +83,6 @@ class SaamiMember(models.Model):
     state = fields.Selection([
         ('active', 'Active'),
         ('suspended', 'Suspended'),
-        ('terminated', 'Terminated'),
     ], string='Status', default='active', tracking=True)
 
     tracker_ids = fields.One2many(
@@ -251,11 +251,40 @@ class SaamiMember(models.Model):
             }
         }
 
+    def unlink(self):
+        raise UserError(_("Members cannot be deleted. Please suspend the member instead."))
+
     def action_suspend(self):
         self.write({'state': 'suspended'})
+        for rec in self:
+            users = rec.user_id | (rec.partner_id.user_ids if rec.partner_id else self.env['res.users'])
+            for user in users.sudo():
+                user.saami_token_version = (user.saami_token_version or 1) + 1
 
     def action_activate(self):
         self.write({'state': 'active'})
 
-    def action_terminate(self):
-        self.write({'state': 'terminated'})
+
+class ResUsers(models.Model):
+    _inherit = 'res.users'
+
+    saami_token_version = fields.Integer(
+        string='Saami Token Version',
+        default=1,
+        copy=False,
+    )
+    saami_is_suspended = fields.Boolean(
+        string='Saami Suspended',
+        compute='_compute_saami_is_suspended',
+    )
+
+    def _compute_saami_is_suspended(self):
+        Member = self.env['saami.member'].sudo()
+        for user in self:
+            if user.partner_id:
+                user.saami_is_suspended = bool(Member.search_count([
+                    ('partner_id', '=', user.partner_id.id),
+                    ('state', '=', 'suspended'),
+                ]))
+            else:
+                user.saami_is_suspended = False
