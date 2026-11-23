@@ -42,6 +42,7 @@ def _build_profile_response(user):
             'type': 'member',
             'member_id': member.id,
             'member_number': member.name,
+            'application_number': member.application_id.name if member.application_id else (application.name if application else None),
             'first_name': member.first_name,
             'middle_name': member.middle_name,
             'last_name': member.last_name,
@@ -312,6 +313,7 @@ class SaamiAuthController(http.Controller):
                 }, status=403)
             status = member.state
             member_number = member.name
+            application_number = member.application_id.name if member.application_id else (application.name if application else None)
         elif application:
             status = application.state  # 'draft', 'pending_payment', 'pending_approval', etc.
             application_number = application.name
