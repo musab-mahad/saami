@@ -145,12 +145,8 @@ class SaamiDashboard extends Component {
     }
 
     _onClickActiveMembers() {
-        this.action.doAction({
-            type: "ir.actions.act_window",
-            name: "Active Members",
-            res_model: "saami.member",
-            views: [[false, "list"], [false, "form"]],
-            domain: [["state", "=", "active"]],
+        this.action.doAction("saami.action_saami_member", {
+            additionalContext: { search_default_filter_active: 1 },
         });
     }
 

@@ -7,7 +7,7 @@ class SaamiMember(models.Model):
     _name = 'saami.member'
     _description = 'Saami Member'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'name desc'
+    _order = 'id desc'
 
     name = fields.Char(
         string='Member Number',
