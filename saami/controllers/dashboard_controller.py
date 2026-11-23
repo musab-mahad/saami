@@ -86,6 +86,13 @@ class SaamiDashboardController(http.Controller):
         status_labels = [label for _, label in pending_status_map]
         status_counts = [counts_by_state.get(key, 0) for key, _ in pending_status_map]
 
+        # Contributed capital by region in selected period
+        region_totals = {}
+        for tx in period_txs:
+            region_name = (tx.member_id.state_id.name if tx.member_id and tx.member_id.state_id else None) or "Unspecified"
+            region_totals[region_name] = region_totals.get(region_name, 0.0) + (tx.amount or 0.0)
+        sorted_regions = sorted(region_totals.items(), key=lambda x: x[1], reverse=True)
+
         return {
             "total_active_members": total_active_members,
             "pending_applications": pending_applications,
@@ -93,6 +100,10 @@ class SaamiDashboardController(http.Controller):
             "period_contributions": period_contributions,
             "period_registration_fees": period_registration_fees,
             "currency": currency,
+            "contributions_by_region": {
+                "regions": [r[0] for r in sorted_regions],
+                "amounts": [round(r[1], 2) for r in sorted_regions],
+            },
             "membership_growth": {
                 "months": growth_months,
                 "new_members": growth_new,

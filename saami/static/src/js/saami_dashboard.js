@@ -8,8 +8,10 @@ class SaamiDashboard extends Component {
     static template = "saami.Dashboard";
 
     setup() {
+        this.regionChartRef = useRef("regionChart");
         this.growthChartRef = useRef("growthChart");
         this.statusPieChartRef = useRef("statusPieChart");
+        this.regionChart = null;
         this.growthChart = null;
         this.statusPieChart = null;
 
@@ -23,6 +25,7 @@ class SaamiDashboard extends Component {
             date_range: "6_months",
             start_date: null,
             end_date: null,
+            contributions_by_region: { regions: [], amounts: [] },
             membership_growth: { months: [], new_members: [], total_members: [] },
             pending_status_breakdown: { labels: [], counts: [] },
         });
@@ -76,6 +79,7 @@ class SaamiDashboard extends Component {
             this.state.period_contributions = data.period_contributions || 0.0;
             this.state.period_registration_fees = data.period_registration_fees || 0.0;
             this.state.currency = data.currency || "$";
+            this.state.contributions_by_region = data.contributions_by_region || { regions: [], amounts: [] };
             this.state.membership_growth = data.membership_growth || { months: [], new_members: [], total_members: [] };
             this.state.pending_status_breakdown = data.pending_status_breakdown || { labels: [], counts: [] };
             this._renderCharts();
@@ -85,6 +89,10 @@ class SaamiDashboard extends Component {
     }
 
     _destroyCharts() {
+        if (this.regionChart) {
+            this.regionChart.destroy();
+            this.regionChart = null;
+        }
         if (this.growthChart) {
             this.growthChart.destroy();
             this.growthChart = null;
@@ -100,6 +108,50 @@ class SaamiDashboard extends Component {
             return;
         }
         this._destroyCharts();
+
+        if (this.regionChartRef.el) {
+            const reg = this.state.contributions_by_region;
+            const currency = this.state.currency || "$";
+            this.regionChart = new window.ApexCharts(this.regionChartRef.el, {
+                chart: {
+                    type: "bar",
+                    height: 300,
+                    toolbar: { show: false },
+                    fontFamily: "inherit",
+                },
+                series: [
+                    {
+                        name: "Contributed Capital",
+                        data: reg.amounts || [],
+                    },
+                ],
+                colors: ["#8b5cf6"],
+                plotOptions: {
+                    bar: {
+                        columnWidth: "45%",
+                        borderRadius: 4,
+                    },
+                },
+                xaxis: {
+                    categories: reg.regions || [],
+                },
+                yaxis: {
+                    min: 0,
+                    labels: {
+                        formatter: (val) => `${currency} ${Number(val).toLocaleString("en-US")}`,
+                    },
+                },
+                tooltip: {
+                    y: {
+                        formatter: (val) => `${currency} ${Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    },
+                },
+                dataLabels: { enabled: false },
+                grid: { borderColor: "#f1f5f9" },
+                noData: { text: "No contributions in selected period" },
+            });
+            this.regionChart.render();
+        }
 
         if (this.growthChartRef.el) {
             const growth = this.state.membership_growth;
@@ -165,7 +217,7 @@ class SaamiDashboard extends Component {
             const hasPending = counts.some((c) => c > 0);
             this.statusPieChart = new window.ApexCharts(this.statusPieChartRef.el, {
                 chart: {
-                    type: "donut",
+                    type: "pie",
                     height: 320,
                     fontFamily: "inherit",
                 },
@@ -173,21 +225,6 @@ class SaamiDashboard extends Component {
                 labels: breakdown.labels || [],
                 colors: ["#94a3b8", "#f59e0b", "#3b82f6"],
                 legend: { position: "bottom" },
-                plotOptions: {
-                    pie: {
-                        donut: {
-                            size: "62%",
-                            labels: {
-                                show: true,
-                                total: {
-                                    show: true,
-                                    label: "Pending",
-                                    formatter: () => String(this.state.pending_applications || 0),
-                                },
-                            },
-                        },
-                    },
-                },
                 dataLabels: {
                     enabled: true,
                     formatter: (val, opts) => opts.w.config.series[opts.seriesIndex],
