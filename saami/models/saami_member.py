@@ -71,7 +71,13 @@ class SaamiMember(models.Model):
     # KYC Attachments
     photo = fields.Binary(string='Photo', attachment=True)
     identity_file = fields.Binary(string='Identity Document', attachment=True)
-    identity_filename = fields.Char(string='Identity Filename', copy=False)
+    identity_filename = fields.Char(
+        string='Identity Filename',
+        compute='_compute_identity_filename',
+        store=True,
+        readonly=False,
+        copy=False,
+    )
 
     state = fields.Selection([
         ('active', 'Active'),
@@ -117,6 +123,14 @@ class SaamiMember(models.Model):
         for rec in self:
             names = [rec.first_name, rec.middle_name, rec.last_name]
             rec.full_name = ' '.join(filter(None, names))
+
+    @api.depends('identity_file', 'name')
+    def _compute_identity_filename(self):
+        for rec in self:
+            if rec.identity_file and not rec.identity_filename:
+                rec.identity_filename = f"{rec.name or 'identity'}_document"
+            elif not rec.identity_file:
+                rec.identity_filename = False
 
     @api.depends('partner_id.phone')
     def _compute_mobile(self):
