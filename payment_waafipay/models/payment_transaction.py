@@ -59,6 +59,7 @@ class PaymentTransaction(models.Model):
         tx_id = params.get('transactionId') or response.get('transactionId')
 
         if response_code in ('2001', '0'):  # Success in WaafiPay API specs
+            _logger.info("WaafiPay USSD push approved immediately for tx=%s (tx_id=%s, code=%s)", self.reference, tx_id, response_code)
             self.write({
                 'waafipay_tx_id': tx_id,
             })
@@ -69,6 +70,7 @@ class PaymentTransaction(models.Model):
                 'message': response.get('responseMsg', 'Payment confirmed successfully.'),
             }
         elif response_code in ('1001',):  # Asynchronous USSD push sent, awaiting user PIN
+            _logger.info("WaafiPay USSD push pending PIN for tx=%s (tx_id=%s, code=%s)", self.reference, tx_id, response_code)
             self.write({
                 'waafipay_tx_id': tx_id,
             })
@@ -82,6 +84,7 @@ class PaymentTransaction(models.Model):
         else:
             # Explicit failure codes (5206 Insufficient funds, 5310 User rejected, 5301 Invalid PIN, 5001 etc.)
             err_msg = response.get('responseMsg', 'Transaction failed')
+            _logger.warning("WaafiPay USSD push failed for tx=%s (code=%s, msg=%s)", self.reference, response_code, err_msg)
             self._set_error(err_msg)
             return {
                 'success': False,
@@ -149,6 +152,11 @@ class PaymentTransaction(models.Model):
             or ''
         )
 
+        _logger.info(
+            "WaafiPay _process_notification_data tx=%s: status=%s, responseCode=%s, waafipay_tx_id=%s",
+            self.reference, status_val, response_code, tx_id,
+        )
+
         if status_val in ('APPROVED', 'SUCCESS') or response_code in ('2001', '0'):
             self._set_done()
         elif status_val in ('PENDING', 'PROCESSING') or response_code in ('1001',):
@@ -160,4 +168,5 @@ class PaymentTransaction(models.Model):
                 or payment_info.get('message')
                 or (f"Payment {status_val}" if status_val else _("Transaction failed"))
             )
+            _logger.warning("WaafiPay _process_notification_data setting error for tx=%s: %s", self.reference, err_msg)
             self._set_error(err_msg)

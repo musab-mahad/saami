@@ -22,6 +22,11 @@ class PaymentTransaction(models.Model):
         ('registration_fee', 'Registration Fee'),
         ('monthly_contribution', 'Monthly Capital Contribution'),
     ], string='Saami Purpose')
+    saami_fulfilled = fields.Boolean(
+        string='Saami Fulfilled',
+        default=False,
+        copy=False,
+    )
 
     def _set_done(self, **kwargs):
         """
@@ -29,16 +34,80 @@ class PaymentTransaction(models.Model):
         1. If registration fee -> advance application to pending_approval and reconcile invoice.
         2. If monthly contribution -> record saami.contribution.transaction and update tracker.
         """
+        _logger.info(
+            "Saami _set_done triggered for tx %s (purpose=%s, amount=%s, provider=%s)",
+            self.mapped('reference'),
+            self.mapped('saami_payment_purpose'),
+            self.mapped('amount'),
+            self.mapped('provider_code'),
+        )
         res = super()._set_done(**kwargs)
         self._process_saami_fulfillment()
         return res
 
+    def _register_saami_invoice_payment(self, invoice, skip_saami_sync=False):
+        """Register an invoice payment using the transaction's provider journal and method line."""
+        self.ensure_one()
+        if not invoice or invoice.payment_state not in ('not_paid', 'partial'):
+            _logger.info(
+                "Skipping payment registration for invoice %s (state=%s, payment_state=%s, residual=%s)",
+                invoice.name if invoice else None,
+                invoice.state if invoice else None,
+                invoice.payment_state if invoice else None,
+                invoice.amount_residual if invoice else None,
+            )
+            return self.env['account.payment']
+
+        ctx = {
+            'active_model': 'account.move',
+            'active_ids': invoice.ids,
+        }
+        if skip_saami_sync:
+            ctx['skip_saami_sync'] = True
+
+        register_vals = {
+            'amount': self.amount,
+            'payment_date': fields.Date.context_today(self),
+        }
+        journal = self.provider_id.journal_id
+        if journal:
+            register_vals['journal_id'] = journal.id
+            method_line = journal.inbound_payment_method_line_ids.filtered(
+                lambda l: l.payment_provider_id == self.provider_id or l.code == self.provider_code
+            )[:1]
+            if method_line:
+                register_vals['payment_method_line_id'] = method_line.id
+
+        _logger.info(
+            "Registering payment for invoice %s (tx=%s, journal=%s, method_line=%s, amount=%s)",
+            invoice.name,
+            self.reference,
+            journal.name if journal else 'default',
+            register_vals.get('payment_method_line_id', 'default'),
+            self.amount,
+        )
+        payment_register = self.env['account.payment.register'].sudo().with_context(**ctx).create(register_vals)
+        payments = payment_register._create_payments()
+        invoice.invalidate_recordset(['payment_state', 'amount_residual'])
+        _logger.info(
+            "Payment registered for invoice %s: payments=%s, payment_state=%s, amount_residual=%s",
+            invoice.name,
+            payments.mapped('name'),
+            invoice.payment_state,
+            invoice.amount_residual,
+        )
+        return payments
+
     def _process_saami_fulfillment(self):
         for tx in self:
+            if tx.saami_fulfilled:
+                _logger.info("Skipping Saami fulfillment for tx %s: already fulfilled.", tx.reference)
+                continue
+
             # Case 1: Registration Fee Payment
             if tx.saami_application_id:
                 app = tx.saami_application_id
-                _logger.info("Fulfilling Saami registration payment for application %s", app.name)
+                _logger.info("Fulfilling Saami registration payment for application %s (tx=%s)", app.name, tx.reference)
                 # Create a transaction record for auditing/receipt
                 member = app.member_id or False
                 self.env['saami.contribution.transaction'].sudo().create({
@@ -55,30 +124,30 @@ class PaymentTransaction(models.Model):
                     'state': 'paid',
                 })
                 # Auto-register payment to mark the registration invoice as paid/reconciled
-                if app.invoice_id and app.invoice_id.payment_state in ('not_paid', 'partial'):
+                if app.invoice_id:
                     try:
-                        payment_register = self.env['account.payment.register'].sudo().with_context(
-                            active_model='account.move',
-                            active_ids=app.invoice_id.ids,
-                        ).create({
-                            'amount': tx.amount,
-                            'payment_date': fields.Date.context_today(tx),
-                        })
-                        payment_register._create_payments()
+                        tx._register_saami_invoice_payment(app.invoice_id)
                     except Exception as e:
-                        _logger.warning("Could not auto-register payment for registration invoice %s: %s", app.invoice_id.name, e)
+                        _logger.warning("Could not auto-register payment for registration invoice %s: %s", app.invoice_id.name, e, exc_info=True)
 
                 if app.invoice_id and app.invoice_id.payment_state in ('paid', 'in_payment') and app.invoice_id.amount_residual <= 0:
                     app.write({'state': 'pending_approval'})
+                    _logger.info("Application %s transitioned to pending_approval (invoice %s state=%s, residual=%s)",
+                                 app.name, app.invoice_id.name, app.invoice_id.payment_state, app.invoice_id.amount_residual)
                     if hasattr(app, 'with_delay'):
                         app.sudo().with_delay()._send_payment_received_email()
                     else:
                         app.sudo()._send_payment_received_email()
                 elif app.invoice_id and app.invoice_id.amount_residual > 0:
+                    _logger.warning(
+                        "Application %s remains %s after payment (invoice %s payment_state=%s, amount_residual=%s)",
+                        app.name, app.state, app.invoice_id.name, app.invoice_id.payment_state, app.invoice_id.amount_residual,
+                    )
                     if hasattr(app, 'with_delay'):
                         app.sudo().with_delay()._send_partial_payment_received_email()
                     else:
                         app.sudo()._send_partial_payment_received_email()
+                tx.saami_fulfilled = True
 
             # Case 2: Monthly Capital Contribution
             elif tx.saami_tracker_id:
@@ -133,23 +202,16 @@ class PaymentTransaction(models.Model):
                 })
 
                 # 3. Register payment on the invoice (with context to avoid duplicate tx creation)
-                if invoice and invoice.payment_state in ('not_paid', 'partial'):
+                if invoice:
                     try:
-                        payment_register = self.env['account.payment.register'].sudo().with_context(
-                            active_model='account.move',
-                            active_ids=invoice.ids,
-                            skip_saami_sync=True,
-                        ).create({
-                            'amount': tx.amount,
-                            'payment_date': fields.Date.context_today(tx),
-                        })
-                        payment_register._create_payments()
+                        tx._register_saami_invoice_payment(invoice, skip_saami_sync=True)
                     except Exception as e:
-                        _logger.warning("Could not auto-register payment for contribution invoice %s: %s", invoice.name, e)
+                        _logger.warning("Could not auto-register payment for contribution invoice %s: %s", invoice.name, e, exc_info=True)
 
                 # Recompute tracker
                 tracker._compute_actual_amount()
                 tracker._compute_state()
+                tx.saami_fulfilled = True
 
                 # Send contribution receipt email (async via queue_job)
                 if hasattr(tx_record, 'with_delay'):

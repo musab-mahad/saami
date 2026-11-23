@@ -38,4 +38,5 @@ odoo.conf
 *.zip
 *.log
 API_DOCUMENTATION.md
+PAYMENT_ENDPOINT_RESPONSES.md
 
