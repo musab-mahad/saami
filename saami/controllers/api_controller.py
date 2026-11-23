@@ -130,6 +130,7 @@ class SaamiApiController(http.Controller):
         identity_b64 = parse_base64_file(data.get('identity_file'))
         if not identity_b64:
             return send_json({'code': 'VALIDATION_ERROR', 'message': 'A valid identity document (identity_file) is required.'}, status=400)
+        identity_filename = data.get('identity_file_filename') or data.get('identity_filename') or f"identity_{email}.png"
 
         email = data['email'].strip().lower()
         bot_env = get_saami_bot_env()
@@ -239,6 +240,7 @@ class SaamiApiController(http.Controller):
                     'kin2_mobile': data.get('kin2_mobile'),
                     'photo': photo_b64,
                     'identity_file': identity_b64,
+                    'identity_filename': identity_filename,
                     'state': 'pending_payment',
                     'email_payment_received_sent': False,
                 }
@@ -305,6 +307,7 @@ class SaamiApiController(http.Controller):
                     'kin2_mobile': data.get('kin2_mobile'),
                     'photo': photo_b64,
                     'identity_file': identity_b64,
+                    'identity_filename': identity_filename,
                     'state': 'pending_payment',
                 }
                 application = bot_env['saami.member.application'].create(app_vals)

@@ -115,6 +115,8 @@ def get_request_payload():
                 raw_bytes = file_storage.read()
                 if raw_bytes:
                     payload[field_name] = base64.b64encode(raw_bytes).decode('ascii')
+                    if file_storage.filename:
+                        payload[f"{field_name}_filename"] = file_storage.filename
         return payload
     return get_json_body()
 

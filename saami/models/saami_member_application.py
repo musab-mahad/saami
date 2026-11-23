@@ -59,6 +59,7 @@ class SaamiMemberApplication(models.Model):
     # KYC Attachments (Optional)
     photo = fields.Binary(string='Photo', attachment=True)
     identity_file = fields.Binary(string='Identity Document', attachment=True)
+    identity_filename = fields.Char(string='Identity Filename', copy=False)
 
     state = fields.Selection([
         ('draft', 'Draft'),
@@ -409,6 +410,7 @@ class SaamiMemberApplication(models.Model):
                 'kin2_mobile': rec.kin2_mobile,
                 'photo': rec.photo,
                 'identity_file': rec.identity_file,
+                'identity_filename': rec.identity_filename,
                 'state': 'active',
             })
             rec.member_id = member.id
