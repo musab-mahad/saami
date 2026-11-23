@@ -49,49 +49,13 @@ class SaamiDashboardController(http.Controller):
 
         currency = env.company.currency_id.symbol or "$"
 
-        # Month-to-month membership growth (new members + cumulative total)
-        growth_months = []
-        growth_new = []
-        growth_total = []
-        cur_month = start_date.replace(day=1)
-        end_month = end_date.replace(day=1)
-        while cur_month <= end_month:
-            next_month = cur_month + relativedelta(months=1)
-            month_start_dt = datetime.combine(cur_month, datetime.min.time())
-            next_month_dt = datetime.combine(next_month, datetime.min.time())
-            new_cnt = Member.search_count([
-                ("create_date", ">=", month_start_dt),
-                ("create_date", "<", next_month_dt),
-            ])
-            total_cnt = Member.search_count([
-                ("create_date", "<", next_month_dt),
-            ])
-            growth_months.append(cur_month.strftime("%b %Y"))
-            growth_new.append(new_cnt)
-            growth_total.append(total_cnt)
-            cur_month = next_month
-
-        # Pending applications breakdown by status
-        pending_status_map = [
-            ("draft", "Draft"),
-            ("pending_payment", "Pending Payment"),
-            ("pending_approval", "Pending Approval"),
-        ]
-        grouped = Application.read_group(
-            [("state", "in", [s[0] for s in pending_status_map])],
-            ["state"],
-            ["state"],
-        )
-        counts_by_state = {row["state"]: row["state_count"] for row in grouped}
-        status_labels = [label for _, label in pending_status_map]
-        status_counts = [counts_by_state.get(key, 0) for key, _ in pending_status_map]
-
-        # Contributed capital by region in selected period
-        region_totals = {}
+        # Contributed capital by region in selected period (include all Somali regions, even with 0)
+        somali_regions = env["res.country.state"].search([("country_id.code", "=", "SO")], order="name asc")
+        region_totals = {r.name: 0.0 for r in somali_regions}
         for tx in period_txs:
             region_name = (tx.member_id.state_id.name if tx.member_id and tx.member_id.state_id else None) or "Unspecified"
             region_totals[region_name] = region_totals.get(region_name, 0.0) + (tx.amount or 0.0)
-        sorted_regions = sorted(region_totals.items(), key=lambda x: x[1], reverse=True)
+        sorted_regions = sorted(region_totals.items(), key=lambda x: (-x[1], x[0]))
 
         return {
             "total_active_members": total_active_members,
@@ -103,14 +67,5 @@ class SaamiDashboardController(http.Controller):
             "contributions_by_region": {
                 "regions": [r[0] for r in sorted_regions],
                 "amounts": [round(r[1], 2) for r in sorted_regions],
-            },
-            "membership_growth": {
-                "months": growth_months,
-                "new_members": growth_new,
-                "total_members": growth_total,
-            },
-            "pending_status_breakdown": {
-                "labels": status_labels,
-                "counts": status_counts,
             },
         }

@@ -2,18 +2,16 @@
 
 import { registry } from "@web/core/registry";
 import { Component, useState, useRef, onWillStart, onMounted, onWillUnmount } from "@odoo/owl";
+import { useService } from "@web/core/utils/hooks";
 import { rpc } from "@web/core/network/rpc";
 
 class SaamiDashboard extends Component {
     static template = "saami.Dashboard";
 
     setup() {
+        this.action = useService("action");
         this.regionChartRef = useRef("regionChart");
-        this.growthChartRef = useRef("growthChart");
-        this.statusPieChartRef = useRef("statusPieChart");
         this.regionChart = null;
-        this.growthChart = null;
-        this.statusPieChart = null;
 
         this.state = useState({
             total_active_members: 0,
@@ -26,8 +24,6 @@ class SaamiDashboard extends Component {
             start_date: null,
             end_date: null,
             contributions_by_region: { regions: [], amounts: [] },
-            membership_growth: { months: [], new_members: [], total_members: [] },
-            pending_status_breakdown: { labels: [], counts: [] },
         });
 
         this._computeDates();
@@ -80,8 +76,6 @@ class SaamiDashboard extends Component {
             this.state.period_registration_fees = data.period_registration_fees || 0.0;
             this.state.currency = data.currency || "$";
             this.state.contributions_by_region = data.contributions_by_region || { regions: [], amounts: [] };
-            this.state.membership_growth = data.membership_growth || { months: [], new_members: [], total_members: [] };
-            this.state.pending_status_breakdown = data.pending_status_breakdown || { labels: [], counts: [] };
             this._renderCharts();
         } catch (error) {
             console.error("Failed to load Saami dashboard metrics", error);
@@ -92,14 +86,6 @@ class SaamiDashboard extends Component {
         if (this.regionChart) {
             this.regionChart.destroy();
             this.regionChart = null;
-        }
-        if (this.growthChart) {
-            this.growthChart.destroy();
-            this.growthChart = null;
-        }
-        if (this.statusPieChart) {
-            this.statusPieChart.destroy();
-            this.statusPieChart = null;
         }
     }
 
@@ -115,7 +101,7 @@ class SaamiDashboard extends Component {
             this.regionChart = new window.ApexCharts(this.regionChartRef.el, {
                 chart: {
                     type: "bar",
-                    height: 300,
+                    height: 320,
                     toolbar: { show: false },
                     fontFamily: "inherit",
                 },
@@ -134,6 +120,10 @@ class SaamiDashboard extends Component {
                 },
                 xaxis: {
                     categories: reg.regions || [],
+                    labels: {
+                        rotate: -35,
+                        trim: true,
+                    },
                 },
                 yaxis: {
                     min: 0,
@@ -148,91 +138,28 @@ class SaamiDashboard extends Component {
                 },
                 dataLabels: { enabled: false },
                 grid: { borderColor: "#f1f5f9" },
-                noData: { text: "No contributions in selected period" },
+                noData: { text: "No regions configured" },
             });
             this.regionChart.render();
         }
+    }
 
-        if (this.growthChartRef.el) {
-            const growth = this.state.membership_growth;
-            this.growthChart = new window.ApexCharts(this.growthChartRef.el, {
-                chart: {
-                    type: "line",
-                    height: 320,
-                    toolbar: { show: false },
-                    fontFamily: "inherit",
-                },
-                series: [
-                    {
-                        name: "Total Members",
-                        type: "area",
-                        data: growth.total_members || [],
-                    },
-                    {
-                        name: "New Members",
-                        type: "column",
-                        data: growth.new_members || [],
-                    },
-                ],
-                colors: ["#3b82f6", "#10b981"],
-                stroke: {
-                    width: [3, 0],
-                    curve: "smooth",
-                },
-                fill: {
-                    type: ["gradient", "solid"],
-                    gradient: {
-                        shadeIntensity: 1,
-                        opacityFrom: 0.35,
-                        opacityTo: 0.05,
-                    },
-                },
-                plotOptions: {
-                    bar: {
-                        columnWidth: "42%",
-                        borderRadius: 4,
-                    },
-                },
-                xaxis: {
-                    categories: growth.months || [],
-                },
-                yaxis: {
-                    min: 0,
-                    forceNiceScale: true,
-                    labels: {
-                        formatter: (val) => Math.round(val),
-                    },
-                },
-                dataLabels: { enabled: false },
-                legend: { position: "top", horizontalAlign: "right" },
-                grid: { borderColor: "#f1f5f9" },
-                noData: { text: "No membership data in selected period" },
-            });
-            this.growthChart.render();
-        }
+    _onClickActiveMembers() {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Active Members",
+            res_model: "saami.member",
+            views: [[false, "list"], [false, "form"]],
+            domain: [["state", "=", "active"]],
+        });
+    }
 
-        if (this.statusPieChartRef.el) {
-            const breakdown = this.state.pending_status_breakdown;
-            const counts = breakdown.counts || [];
-            const hasPending = counts.some((c) => c > 0);
-            this.statusPieChart = new window.ApexCharts(this.statusPieChartRef.el, {
-                chart: {
-                    type: "pie",
-                    height: 320,
-                    fontFamily: "inherit",
-                },
-                series: hasPending ? counts : [],
-                labels: breakdown.labels || [],
-                colors: ["#94a3b8", "#f59e0b", "#3b82f6"],
-                legend: { position: "bottom" },
-                dataLabels: {
-                    enabled: true,
-                    formatter: (val, opts) => opts.w.config.series[opts.seriesIndex],
-                },
-                noData: { text: "No pending applications" },
-            });
-            this.statusPieChart.render();
-        }
+    _onClickPendingApplications() {
+        this.action.doAction("saami.action_saami_member_application");
+    }
+
+    _onClickTotalContributions() {
+        this.action.doAction("saami.action_saami_contribution_tracker");
     }
 
     async _onDateRangeChange(ev) {

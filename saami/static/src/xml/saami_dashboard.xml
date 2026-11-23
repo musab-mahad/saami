@@ -25,7 +25,7 @@
             <div class="row g-3 mb-4">
                 <!-- Card 1: Active Members -->
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #3b82f6 !important; border-radius: 0px !important;">
+                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #3b82f6 !important; border-radius: 0px !important; cursor: pointer;" t-on-click="this._onClickActiveMembers">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <div class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Active Members</div>
@@ -43,7 +43,7 @@
 
                 <!-- Card 2: Pending Applications -->
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #10b981 !important; border-radius: 0px !important;">
+                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #10b981 !important; border-radius: 0px !important; cursor: pointer;" t-on-click="this._onClickPendingApplications">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <div class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Pending Applications</div>
@@ -61,7 +61,7 @@
 
                 <!-- Card 3: Total Contributed Capital -->
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #8b5cf6 !important; border-radius: 0px !important;">
+                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-left: 5px solid #8b5cf6 !important; border-radius: 0px !important; cursor: pointer;" t-on-click="this._onClickTotalContributions">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <div class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">Total Contributed Capital</div>
@@ -96,7 +96,7 @@
                 </div>
             </div>
 
-            <!-- First Chart Row: Contributed Capital by Region -->
+            <!-- Contributed Capital by Region -->
             <div class="row g-3 mb-4">
                 <div class="col-12">
                     <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-radius: 0px !important;">
@@ -106,34 +106,7 @@
                                 <div class="text-muted" style="font-size: 0.8rem;">Total capital contributions across regions in selected period</div>
                             </div>
                         </div>
-                        <div t-ref="regionChart" style="min-height: 300px;"/>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Second Chart Row: 2/3 Membership Growth + 1/3 Pending Application Statuses -->
-            <div class="row g-3">
-                <div class="col-12 col-lg-8">
-                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-radius: 0px !important;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <div class="text-uppercase fw-semibold text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">Membership Growth</div>
-                                <div class="text-muted" style="font-size: 0.8rem;">Month-to-month new &amp; cumulative members</div>
-                            </div>
-                        </div>
-                        <div t-ref="growthChart" style="min-height: 320px;"/>
-                    </div>
-                </div>
-
-                <div class="col-12 col-lg-4">
-                    <div class="card shadow-sm bg-white h-100 p-3" style="border: 1px solid #e5e7eb !important; border-radius: 0px !important;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <div class="text-uppercase fw-semibold text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">Pending Applications</div>
-                                <div class="text-muted" style="font-size: 0.8rem;">Breakdown by current status</div>
-                            </div>
-                        </div>
-                        <div t-ref="statusPieChart" style="min-height: 320px;"/>
+                        <div t-ref="regionChart" style="min-height: 320px;"/>
                     </div>
                 </div>
             </div>
