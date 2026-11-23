@@ -448,9 +448,10 @@ class SaamiApiController(http.Controller):
             'result': res,
             'payer_phone': phone,
             'created_at': tx.create_date.strftime('%Y-%m-%d %H:%M:%S') if tx.create_date else None,
-            'period': tracker.date.strftime('%Y-%m') if tracker.date else None,
+            'period': tracker.month_name or (tracker.date.strftime('%B %Y') if tracker.date else None),
             'tracker': {
                 'month': tracker.month_name,
+                'expected': tracker.expected_amount,
                 'actual_paid': tracker.actual_amount,
                 'status': tracker.state,
             }
@@ -500,8 +501,8 @@ class SaamiApiController(http.Controller):
                 'payment_method': t.payment_method,
                 'payer_phone': t.payer_phone or None,
                 'period': (
-                    t.tracker_id.date.strftime('%Y-%m')
-                    if t.transaction_type == 'monthly_contribution' and t.tracker_id and t.tracker_id.date
+                    t.tracker_id.month_name or t.tracker_id.date.strftime('%B %Y')
+                    if t.transaction_type == 'monthly_contribution' and t.tracker_id and (t.tracker_id.month_name or t.tracker_id.date)
                     else None
                 ),
                 'external_reference': t.external_reference,
