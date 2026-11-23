@@ -5,7 +5,7 @@
         <field name="name">saami.contribution.transaction.list</field>
         <field name="model">saami.contribution.transaction</field>
         <field name="arch" type="xml">
-            <list string="Contribution Transactions" default_order="date desc, id desc" decoration-success="state == 'paid'" decoration-warning="state == 'pending'" decoration-danger="state == 'failed'" decoration-muted="state in ('draft', 'cancelled')">
+            <list string="Contribution Transactions" default_order="date desc, id desc">
                 <field name="name"/>
                 <field name="date"/>
                 <field name="member_id"/>
