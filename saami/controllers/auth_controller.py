@@ -18,8 +18,19 @@ from .jwt_utils import (
 _logger = logging.getLogger(__name__)
 
 
+def _get_api_base_url():
+    req_url = request.httprequest.url_root.rstrip('/')
+    param_url = (request.env['ir.config_parameter'].sudo().get_param('web.base.url', '') or '').rstrip('/')
+    if param_url.startswith('https://') and req_url.startswith('http://'):
+        req_host = request.httprequest.host.split(':', 1)[0].lower()
+        param_host = param_url.split('://', 1)[1].split('/', 1)[0].split(':', 1)[0].lower()
+        if req_host == param_host:
+            return param_url
+    return req_url or param_url
+
+
 def _build_profile_response(user):
-    base_url = request.httprequest.url_root.rstrip('/') or request.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/')
+    base_url = _get_api_base_url()
     user_image_url = f"{base_url}/api/saami/user/{user.partner_id.id}/avatar" if user.partner_id.image_1920 else None
 
     Application = request.env['saami.member.application'].sudo()
@@ -325,7 +336,7 @@ class SaamiAuthController(http.Controller):
         }
         token = generate_jwt(user, extra_payload=extra_payload)
 
-        base_url = request.httprequest.url_root.rstrip('/') or request.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/')
+        base_url = _get_api_base_url()
         user_image_url = f"{base_url}/api/saami/user/{user.partner_id.id}/avatar" if user.partner_id.image_1920 else None
 
         user_data = {
