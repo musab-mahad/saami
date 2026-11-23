@@ -82,6 +82,11 @@ class SaamiContributionTransaction(models.Model):
         string='Payment Channel',
         help="Payment gateway, e.g. WaafiPay, M-Pesa, Bank Transfer, Cash",
     )
+    payer_phone = fields.Char(
+        string='Payer Phone',
+        tracking=True,
+        help="The mobile phone number used to make the payment.",
+    )
     external_reference = fields.Char(
         string='External Gateway Ref',
         copy=False,

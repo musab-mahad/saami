@@ -17,6 +17,12 @@ class SaamiContributionTracker(models.Model):
         ondelete='cascade',
         index=True,
     )
+    member_name = fields.Char(
+        string='Member Name',
+        related='member_id.full_name',
+        store=True,
+        readonly=True,
+    )
     partner_id = fields.Many2one(
         'res.partner',
         string='Partner',

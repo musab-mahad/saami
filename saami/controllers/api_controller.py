@@ -369,6 +369,7 @@ class SaamiApiController(http.Controller):
             'partner_id': user.partner_id.id,
             'saami_application_id': app.id,
             'saami_payment_purpose': 'registration_fee',
+            'saami_payer_phone': phone,
             'invoice_ids': [(4, invoice.id)],
             'operation': 'offline',
         })
@@ -377,6 +378,8 @@ class SaamiApiController(http.Controller):
         return send_json({
             'code': 'SUCCESS' if res.get('success') else 'PAYMENT_FAILED',
             'result': res,
+            'payer_phone': phone,
+            'created_at': tx.create_date.strftime('%Y-%m-%d %H:%M:%S') if tx.create_date else None,
             'application_status': app.state,
         }, status=200 if res.get('success') else 400)
 
@@ -435,6 +438,7 @@ class SaamiApiController(http.Controller):
             'partner_id': user.partner_id.id,
             'saami_tracker_id': tracker.id,
             'saami_payment_purpose': 'monthly_contribution',
+            'saami_payer_phone': phone,
             'operation': 'offline',
         })
 
@@ -442,6 +446,9 @@ class SaamiApiController(http.Controller):
         return send_json({
             'code': 'SUCCESS' if res.get('success') else 'PAYMENT_FAILED',
             'result': res,
+            'payer_phone': phone,
+            'created_at': tx.create_date.strftime('%Y-%m-%d %H:%M:%S') if tx.create_date else None,
+            'period': tracker.date.strftime('%Y-%m') if tracker.date else None,
             'tracker': {
                 'month': tracker.month_name,
                 'actual_paid': tracker.actual_amount,
@@ -485,11 +492,18 @@ class SaamiApiController(http.Controller):
                 'id': t.id,
                 'reference': t.name,
                 'date': str(t.date),
+                'created_at': t.create_date.strftime('%Y-%m-%d %H:%M:%S') if t.create_date else None,
                 'type': t.transaction_type,
                 'type_label': dict(t._fields['transaction_type'].selection).get(t.transaction_type),
                 'amount': t.amount,
                 'currency': t.currency_id.symbol or t.currency_id.name,
                 'payment_method': t.payment_method,
+                'payer_phone': t.payer_phone or None,
+                'period': (
+                    t.tracker_id.date.strftime('%Y-%m')
+                    if t.transaction_type == 'monthly_contribution' and t.tracker_id and t.tracker_id.date
+                    else None
+                ),
                 'external_reference': t.external_reference,
                 'status': t.state,
             })

@@ -27,6 +27,10 @@ class PaymentTransaction(models.Model):
         default=False,
         copy=False,
     )
+    saami_payer_phone = fields.Char(
+        string='Saami Payer Phone',
+        copy=False,
+    )
 
     def _set_done(self, **kwargs):
         """
@@ -119,6 +123,7 @@ class PaymentTransaction(models.Model):
                     'amount': tx.amount,
                     'currency_id': tx.currency_id.id,
                     'payment_method': tx.provider_code or 'online',
+                    'payer_phone': tx.saami_payer_phone or (app.mobile if app else False),
                     'external_reference': tx.reference,
                     'invoice_id': app.invoice_id.id if app.invoice_id else False,
                     'state': 'paid',
@@ -196,6 +201,7 @@ class PaymentTransaction(models.Model):
                     'amount': tx.amount,
                     'currency_id': tx.currency_id.id,
                     'payment_method': tx.provider_code or 'online',
+                    'payer_phone': tx.saami_payer_phone or (member.mobile if member else False),
                     'external_reference': tx.reference,
                     'invoice_id': invoice.id if invoice else False,
                     'state': 'paid',

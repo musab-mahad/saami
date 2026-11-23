@@ -8,6 +8,7 @@
             <list string="Contributions Tracker" default_order="date desc, member_id" create="false" decoration-success="state == 'paid'" decoration-info="state == 'excess'" decoration-warning="state == 'partial'" decoration-muted="state == 'unpaid'">
                 <field name="date" string="Period"/>
                 <field name="member_id"/>
+                <field name="member_name"/>
                 <field name="expected_amount" widget="monetary" sum="Total Expected" width="150px"/>
                 <field name="actual_amount" widget="monetary" sum="Total Contributed" width="150px"/>
                 <field name="currency_id" column_invisible="True"/>
@@ -84,6 +85,7 @@
         <field name="arch" type="xml">
             <search string="Search Contributions Tracker">
                 <field name="member_id" string="Member"/>
+                <field name="member_name" string="Member Name"/>
                 <field name="partner_id" string="Partner"/>
                 <field name="month_name" string="Month"/>
                 <filter name="filter_paid" string="Fully Paid" domain="[('state', '=', 'paid')]"/>

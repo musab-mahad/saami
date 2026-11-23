@@ -101,6 +101,11 @@ class SaamiMember(models.Model):
         default=lambda self: self.env.company.currency_id,
     )
 
+    _sql_constraints = [
+        ('uniq_member_number', 'unique(name)', 'Member Number must be unique!'),
+        ('uniq_member_partner', 'unique(partner_id)', 'A member record already exists for this partner!'),
+    ]
+
     @api.depends('partner_id.user_ids')
     def _compute_user_id(self):
         for rec in self:
