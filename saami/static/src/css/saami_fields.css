@@ -1,0 +1,4 @@
+.saami_binary_no_text_click input.o_input {
+    pointer-events: none;
+    cursor: default;
+}
