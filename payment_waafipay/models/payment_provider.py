@@ -26,10 +26,6 @@ class PaymentProvider(models.Model):
         string="API Key",
         groups='base.group_system',
     )
-    waafipay_webhook_url = fields.Char(
-        string="Webhook URL",
-        help="The public URL for receiving transaction notifications from WaafiPay.",
-    )
     waafipay_test_phone = fields.Char(
         string="Test Phone Number",
         help="Phone number in international format (e.g., 25261XXXXXX).",

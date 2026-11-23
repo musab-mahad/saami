@@ -56,10 +56,14 @@ class PaymentTransaction(models.Model):
         response = provider._waafipay_make_request(payload)
         response_code = str(response.get('responseCode', ''))
         params = response.get('params', {}) or {}
+        param_state = str(params.get('state', '')).upper()
         tx_id = params.get('transactionId') or response.get('transactionId')
 
-        if response_code in ('2001', '0'):  # Success in WaafiPay API specs
-            _logger.info("WaafiPay USSD push approved immediately for tx=%s (tx_id=%s, code=%s)", self.reference, tx_id, response_code)
+        if response_code in ('2001', '0') and param_state in ('', 'APPROVED', 'SUCCESS'):
+            _logger.info(
+                "WaafiPay USSD push approved immediately for tx=%s (tx_id=%s, code=%s, param_state=%s)",
+                self.reference, tx_id, response_code, param_state,
+            )
             self.write({
                 'waafipay_tx_id': tx_id,
             })
@@ -69,8 +73,11 @@ class PaymentTransaction(models.Model):
                 'transaction_id': tx_id,
                 'message': response.get('responseMsg', 'Payment confirmed successfully.'),
             }
-        elif response_code in ('1001',):  # Asynchronous USSD push sent, awaiting user PIN
-            _logger.info("WaafiPay USSD push pending PIN for tx=%s (tx_id=%s, code=%s)", self.reference, tx_id, response_code)
+        elif response_code in ('1001',) or (response_code in ('2001', '0') and param_state in ('PENDING', 'PROCESSING')):
+            _logger.info(
+                "WaafiPay USSD push pending PIN for tx=%s (tx_id=%s, code=%s, param_state=%s)",
+                self.reference, tx_id, response_code, param_state,
+            )
             self.write({
                 'waafipay_tx_id': tx_id,
             })
@@ -82,9 +89,12 @@ class PaymentTransaction(models.Model):
                 'message': response.get('responseMsg', 'USSD push sent. Awaiting PIN entry on your phone.'),
             }
         else:
-            # Explicit failure codes (5206 Insufficient funds, 5310 User rejected, 5301 Invalid PIN, 5001 etc.)
-            err_msg = response.get('responseMsg', 'Transaction failed')
-            _logger.warning("WaafiPay USSD push failed for tx=%s (code=%s, msg=%s)", self.reference, response_code, err_msg)
+            # Explicit failure codes (5206 Insufficient funds, 5310 User rejected, 5301 Invalid PIN, 5001, or non-approved state)
+            err_msg = response.get('responseMsg') or (f"Payment {param_state}" if param_state else 'Transaction failed')
+            _logger.warning(
+                "WaafiPay USSD push failed for tx=%s (code=%s, param_state=%s, msg=%s)",
+                self.reference, response_code, param_state, err_msg,
+            )
             self._set_error(err_msg)
             return {
                 'success': False,
