@@ -117,6 +117,10 @@ class SaamiContributionTransaction(models.Model):
         copy=False,
     )
 
+    _sql_constraints = [
+        ('uniq_transaction_reference', 'unique(name)', 'Transaction Reference must be unique!'),
+    ]
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:

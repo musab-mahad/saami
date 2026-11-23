@@ -87,6 +87,10 @@ class SaamiMemberApplication(models.Model):
         copy=False,
     )
 
+    _sql_constraints = [
+        ('uniq_application_number', 'unique(name)', 'Application Number must be unique!'),
+    ]
+
     @api.depends('first_name', 'middle_name', 'last_name')
     def _compute_full_name(self):
         for rec in self:
