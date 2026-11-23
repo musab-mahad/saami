@@ -43,6 +43,7 @@ and capital contributions.
     ],
     'assets': {
         'web.assets_backend': [
+            'saami/static/lib/apexcharts/apexcharts.min.js',
             'saami/static/src/css/saami_fields.css',
             'saami/static/src/xml/saami_dashboard.xml',
             'saami/static/src/js/saami_dashboard.js',

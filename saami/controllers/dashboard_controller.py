@@ -49,6 +49,43 @@ class SaamiDashboardController(http.Controller):
 
         currency = env.company.currency_id.symbol or "$"
 
+        # Month-to-month membership growth (new members + cumulative total)
+        growth_months = []
+        growth_new = []
+        growth_total = []
+        cur_month = start_date.replace(day=1)
+        end_month = end_date.replace(day=1)
+        while cur_month <= end_month:
+            next_month = cur_month + relativedelta(months=1)
+            month_start_dt = datetime.combine(cur_month, datetime.min.time())
+            next_month_dt = datetime.combine(next_month, datetime.min.time())
+            new_cnt = Member.search_count([
+                ("create_date", ">=", month_start_dt),
+                ("create_date", "<", next_month_dt),
+            ])
+            total_cnt = Member.search_count([
+                ("create_date", "<", next_month_dt),
+            ])
+            growth_months.append(cur_month.strftime("%b %Y"))
+            growth_new.append(new_cnt)
+            growth_total.append(total_cnt)
+            cur_month = next_month
+
+        # Pending applications breakdown by status
+        pending_status_map = [
+            ("draft", "Draft"),
+            ("pending_payment", "Pending Payment"),
+            ("pending_approval", "Pending Approval"),
+        ]
+        grouped = Application.read_group(
+            [("state", "in", [s[0] for s in pending_status_map])],
+            ["state"],
+            ["state"],
+        )
+        counts_by_state = {row["state"]: row["state_count"] for row in grouped}
+        status_labels = [label for _, label in pending_status_map]
+        status_counts = [counts_by_state.get(key, 0) for key, _ in pending_status_map]
+
         return {
             "total_active_members": total_active_members,
             "pending_applications": pending_applications,
@@ -56,4 +93,13 @@ class SaamiDashboardController(http.Controller):
             "period_contributions": period_contributions,
             "period_registration_fees": period_registration_fees,
             "currency": currency,
+            "membership_growth": {
+                "months": growth_months,
+                "new_members": growth_new,
+                "total_members": growth_total,
+            },
+            "pending_status_breakdown": {
+                "labels": status_labels,
+                "counts": status_counts,
+            },
         }
