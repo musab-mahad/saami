@@ -10,24 +10,12 @@ from .jwt_utils import (
     send_json,
     handle_cors,
     get_json_body,
+    parse_base64_file,
     generate_jwt,
     require_jwt,
 )
 
 _logger = logging.getLogger(__name__)
-
-
-def _parse_image_base64(raw_image):
-    if not raw_image or not isinstance(raw_image, str):
-        return None
-    raw_str = raw_image.strip()
-    if ',' in raw_str:
-        raw_str = raw_str.split(',', 1)[1].strip()
-    try:
-        base64.b64decode(raw_str, validate=True)
-        return raw_str
-    except Exception:
-        return None
 
 
 def _build_profile_response(user):
@@ -65,6 +53,7 @@ def _build_profile_response(user):
             'mother_name': member.mother_name,
             'education_level': member.education_level,
             'image_url': photo_url,
+            'identity_url': f"{base_url}/api/saami/member/{member.id}/identity" if member.identity_file else None,
             'district_id': member.district_id.id if member.district_id else False,
             'district': member.district_id.name if member.district_id else (member.district or False),
             'region_id': member.state_id.id if member.state_id else False,
@@ -112,6 +101,7 @@ def _build_profile_response(user):
             'mother_name': application.mother_name,
             'education_level': application.education_level,
             'image_url': photo_url,
+            'identity_url': f"{base_url}/api/saami/application/{application.id}/identity" if application.identity_file else None,
             'district_id': application.district_id.id if application.district_id else False,
             'district': application.district_id.name if application.district_id else (application.district or False),
             'region_id': application.state_id.id if application.state_id else False,
@@ -398,7 +388,7 @@ class SaamiAuthController(http.Controller):
         # 1. Profile image / photo
         raw_image = data.get('image') or data.get('photo') or data.get('image_base64')
         if raw_image:
-            img_b64 = _parse_image_base64(raw_image)
+            img_b64 = parse_base64_file(raw_image)
             if img_b64:
                 partner_vals['image_1920'] = img_b64
                 member_vals['photo'] = img_b64
@@ -616,3 +606,27 @@ class SaamiAuthController(http.Controller):
             return request.env['ir.binary']._get_image_stream_from(app.partner_id.sudo(), 'image_1920').get_response()
 
         return request.not_found()
+
+    @http.route('/api/saami/member/<int:member_id>/identity', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_member_identity(self, member_id, **kwargs):
+        preflight = handle_cors(['GET', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        member = request.env['saami.member'].sudo().search([('id', '=', member_id)], limit=1)
+        if not member or not member.identity_file:
+            return request.not_found()
+
+        return request.env['ir.binary']._get_stream_from(member.sudo(), 'identity_file').get_response()
+
+    @http.route('/api/saami/application/<int:app_id>/identity', type='http', auth='none', methods=['GET', 'OPTIONS'], csrf=False)
+    def get_application_identity(self, app_id, **kwargs):
+        preflight = handle_cors(['GET', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        app = request.env['saami.member.application'].sudo().search([('id', '=', app_id)], limit=1)
+        if not app or not app.identity_file:
+            return request.not_found()
+
+        return request.env['ir.binary']._get_stream_from(app.sudo(), 'identity_file').get_response()

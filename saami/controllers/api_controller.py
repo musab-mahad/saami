@@ -3,7 +3,7 @@ import logging
 from odoo import http, fields, _
 from odoo.http import request
 
-from .jwt_utils import send_json, handle_cors, get_json_body, require_jwt
+from .jwt_utils import send_json, handle_cors, get_json_body, get_request_payload, parse_base64_file, require_jwt
 
 _logger = logging.getLogger(__name__)
 
@@ -114,14 +114,22 @@ class SaamiApiController(http.Controller):
         if preflight:
             return preflight
 
-        data = get_json_body()
+        data = get_request_payload()
         if not data:
-            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON or multipart/form-data payload is required.'}, status=400)
 
-        required_fields = ['first_name', 'middle_name', 'last_name', 'mother_name', 'mobile', 'email', 'password', 'date_of_birth', 'gender', 'education_level', 'country_id', 'state_id', 'district_id', 'residence_address', 'kin1_name', 'kin1_mobile', 'kin1_address']
+        required_fields = ['first_name', 'middle_name', 'last_name', 'mother_name', 'mobile', 'email', 'password', 'date_of_birth', 'gender', 'education_level', 'country_id', 'state_id', 'district_id', 'residence_address', 'kin1_name', 'kin1_mobile', 'kin1_address', 'photo', 'identity_file']
         missing = [f for f in required_fields if not data.get(f)]
         if missing:
             return send_json({'code': 'VALIDATION_ERROR', 'message': f"Missing required fields: {', '.join(missing)}"}, status=400)
+
+        photo_b64 = parse_base64_file(data.get('photo'))
+        if not photo_b64:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': 'A valid profile photo (photo) is required.'}, status=400)
+
+        identity_b64 = parse_base64_file(data.get('identity_file'))
+        if not identity_b64:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': 'A valid identity document (identity_file) is required.'}, status=400)
 
         email = data['email'].strip().lower()
         bot_env = get_saami_bot_env()
@@ -157,6 +165,7 @@ class SaamiApiController(http.Controller):
                         'country_id': int(data['country_id']),
                         'state_id': state_id,
                         'city': district_name,
+                        'image_1920': photo_b64,
                     })
                 else:
                     partner = bot_env['res.partner'].create({
@@ -167,6 +176,7 @@ class SaamiApiController(http.Controller):
                         'country_id': int(data['country_id']),
                         'state_id': state_id,
                         'city': district_name,
+                        'image_1920': photo_b64,
                         'company_id': company.id,
                     })
                     existing_app.partner_id = partner.id
@@ -227,8 +237,8 @@ class SaamiApiController(http.Controller):
                     'kin2_name': data.get('kin2_name'),
                     'kin2_address': data.get('kin2_address'),
                     'kin2_mobile': data.get('kin2_mobile'),
-                    'photo': data.get('photo'),
-                    'identity_file': data.get('identity_file'),
+                    'photo': photo_b64,
+                    'identity_file': identity_b64,
                     'state': 'pending_payment',
                     'email_payment_received_sent': False,
                 }
@@ -244,6 +254,7 @@ class SaamiApiController(http.Controller):
                     'country_id': int(data['country_id']),
                     'state_id': state_id,
                     'city': district_name,
+                    'image_1920': photo_b64,
                     'company_id': company.id,
                 })
 
@@ -292,8 +303,8 @@ class SaamiApiController(http.Controller):
                     'kin2_name': data.get('kin2_name'),
                     'kin2_address': data.get('kin2_address'),
                     'kin2_mobile': data.get('kin2_mobile'),
-                    'photo': data.get('photo'),
-                    'identity_file': data.get('identity_file'),
+                    'photo': photo_b64,
+                    'identity_file': identity_b64,
                     'state': 'pending_payment',
                 }
                 application = bot_env['saami.member.application'].create(app_vals)

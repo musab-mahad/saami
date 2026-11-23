@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import base64
 import json
 import logging
 import secrets
@@ -80,6 +81,42 @@ def get_json_body():
         return json.loads(request.httprequest.data.decode('utf-8'))
     except Exception:
         return None
+
+
+def parse_base64_file(raw_value):
+    """
+    Validate and normalize a base64 string (with or without a data URI prefix).
+    Returns clean base64 string or None if invalid/empty.
+    """
+    if not raw_value or not isinstance(raw_value, str):
+        return None
+    raw_str = raw_value.strip()
+    if ',' in raw_str:
+        raw_str = raw_str.split(',', 1)[1].strip()
+    if not raw_str:
+        return None
+    try:
+        base64.b64decode(raw_str, validate=True)
+        return raw_str
+    except Exception:
+        return None
+
+
+def get_request_payload():
+    """
+    Extract request payload from either multipart/form-data (with file uploads)
+    or application/json body.
+    """
+    content_type = (request.httprequest.content_type or '').lower()
+    if 'multipart/form-data' in content_type or 'application/x-www-form-urlencoded' in content_type:
+        payload = {k: v for k, v in request.httprequest.form.items()}
+        for field_name, file_storage in request.httprequest.files.items():
+            if file_storage:
+                raw_bytes = file_storage.read()
+                if raw_bytes:
+                    payload[field_name] = base64.b64encode(raw_bytes).decode('ascii')
+        return payload
+    return get_json_body()
 
 
 def generate_jwt(user, extra_payload=None, expires_in_hours=None):
