@@ -151,8 +151,9 @@ class SaamiMemberApplication(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
-        # Sync name/mobile/email to partner if updated on application
+        # Sync name/mobile/email to partner and user.login if updated on application
         if any(f in vals for f in ['first_name', 'middle_name', 'last_name', 'mobile', 'email']):
+            ResUsers = self.env['res.users'].sudo()
             for rec in self:
                 if rec.partner_id:
                     partner_vals = {}
@@ -160,10 +161,10 @@ class SaamiMemberApplication(models.Model):
                         partner_vals['name'] = rec.full_name
                     if 'mobile' in vals:
                         partner_vals['phone'] = rec.mobile
-                    if 'email' in vals:
-                        partner_vals['email'] = rec.email
                     if partner_vals:
                         rec.partner_id.write(partner_vals)
+                if 'email' in vals and rec.email:
+                    ResUsers._saami_sync_login_email(rec.partner_id, rec.email, extra_users=rec.user_id)
         return res
 
     def action_submit(self):

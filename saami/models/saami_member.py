@@ -148,9 +148,10 @@ class SaamiMember(models.Model):
             rec.email = rec.partner_id.email
 
     def _inverse_email(self):
+        ResUsers = self.env['res.users'].sudo()
         for rec in self:
             if rec.partner_id and rec.email:
-                rec.partner_id.email = rec.email
+                ResUsers._saami_sync_login_email(rec.partner_id, rec.email, extra_users=rec.user_id)
 
     @api.depends('tracker_ids.actual_amount')
     def _compute_total_contributions(self):
@@ -288,3 +289,22 @@ class ResUsers(models.Model):
                 ]))
             else:
                 user.saami_is_suspended = False
+
+    @api.model
+    def _saami_sync_login_email(self, partner, new_email, extra_users=None):
+        """Keep partner.email and linked user.login synchronized and unique."""
+        clean_email = (new_email or '').strip().lower()
+        if not clean_email:
+            return
+        if partner and (partner.email or '').strip().lower() != clean_email:
+            partner.sudo().write({'email': clean_email})
+        users = (partner.user_ids if partner else self.browse()) | (extra_users or self.browse())
+        for user in users.sudo():
+            if (user.login or '').strip().lower() != clean_email:
+                duplicate = self.sudo().search([
+                    ('login', '=ilike', clean_email),
+                    ('id', '!=', user.id),
+                ], limit=1)
+                if duplicate:
+                    raise ValidationError(_("A user account with email %s already exists.", clean_email))
+                user.write({'login': clean_email})
