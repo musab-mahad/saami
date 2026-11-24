@@ -574,6 +574,80 @@ class SaamiAuthController(http.Controller):
             'message': 'Password has been changed successfully.',
         }, status=200)
 
+    @http.route('/api/saami/auth/forgot-password', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    def forgot_password(self):
+        """
+        Public endpoint to request a 6-digit password reset OTP code.
+        """
+        preflight = handle_cors(['POST', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        data = get_json_body()
+        if not data:
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
+
+        login = (data.get('login') or data.get('email') or '').strip().lower()
+        if not login:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': 'Email address (login) is required.'}, status=400)
+
+        forwarded_for = (request.httprequest.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+        ip_addr = forwarded_for or request.httprequest.remote_addr
+
+        ok, code = request.env['saami.password.reset'].sudo()._request_reset(login, ip_addr=ip_addr)
+        if not ok and code == 'RATE_LIMITED':
+            return send_json({
+                'code': 'RATE_LIMITED',
+                'message': 'Too many requests. Please try again later.',
+            }, status=429)
+        if not ok and code == 'MEMBER_SUSPENDED':
+            return send_json({
+                'code': 'MEMBER_SUSPENDED',
+                'message': 'Your membership has been suspended. Please contact support.',
+            }, status=403)
+
+        return send_json({
+            'code': 'SUCCESS',
+            'message': 'If this email is registered, a code has been sent.',
+        }, status=200)
+
+    @http.route('/api/saami/auth/reset-password', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    def reset_password(self):
+        """
+        Public endpoint to verify the 6-digit OTP and set a new password.
+        """
+        preflight = handle_cors(['POST', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        data = get_json_body()
+        if not data:
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
+
+        login = (data.get('login') or data.get('email') or '').strip().lower()
+        code = str(data.get('code') or '').strip()
+        new_password = data.get('new_password') or ''
+
+        if len(new_password) < 8:
+            return send_json({
+                'code': 'VALIDATION_ERROR',
+                'message': 'New password must be at least 8 characters long.',
+            }, status=400)
+
+        if not login or not code:
+            return send_json({
+                'code': 'VALIDATION_ERROR',
+                'message': 'The code is invalid or has expired.',
+            }, status=400)
+
+        ok, res_code, msg = request.env['saami.password.reset'].sudo()._verify_and_reset(login, code, new_password)
+        if not ok and res_code == 'MEMBER_SUSPENDED':
+            return send_json({'code': 'MEMBER_SUSPENDED', 'message': msg}, status=403)
+        if not ok:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': msg}, status=400)
+
+        return send_json({'code': 'SUCCESS', 'message': msg}, status=200)
+
     # -------------------------------------------------------------------------
     # PUBLIC AVATAR / PHOTO STREAMING ENDPOINTS (TAAKULO PATTERN)
     # -------------------------------------------------------------------------

@@ -130,5 +130,25 @@
                 </div>
             </field>
         </record>
+
+        <!-- 6. Password Reset OTP Template -->
+        <record id="mail_template_password_reset" model="mail.template">
+            <field name="name">Saami: Password Reset Code</field>
+            <field name="model_id" ref="saami.model_saami_password_reset"/>
+            <field name="subject">Saami Password Reset Verification Code</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
+            <field name="email_to">{{ object.login_email or (object.user_id and object.user_id.login) }}</field>
+            <field name="body_html" type="html">
+                <div>
+                    <p>Hello <t t-out="object.user_id.name or 'there'"/>,</p>
+                    <p>We received a request to reset your Saami account password. Use the verification code below to set a new password:</p>
+                    <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 16px 0;"><t t-out="ctx.get('otp_code', '')"/></p>
+                    <p>This code expires in <strong>15 minutes</strong> and can only be used once.</p>
+                    <p>If you did not request a password reset, you can safely ignore this email.</p>
+                    <p>Best regards,<br/><strong>The Saami Team</strong></p>
+                </div>
+            </field>
+        </record>
     </data>
 </odoo>

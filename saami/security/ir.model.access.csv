@@ -10,3 +10,4 @@ access_saami_contribution_tracker_portal,saami.contribution.tracker.portal,model
 access_saami_contribution_transaction_user,saami.contribution.transaction.user,model_saami_contribution_transaction,base.group_user,1,1,1,1
 access_saami_contribution_transaction_portal,saami.contribution.transaction.portal,model_saami_contribution_transaction,base.group_portal,1,0,0,0
 access_saami_create_user_wizard_user,saami.create.user.wizard.user,model_saami_create_user_wizard,base.group_user,1,1,1,1
+access_saami_password_reset_user,saami.password.reset.user,model_saami_password_reset,base.group_user,1,1,1,1

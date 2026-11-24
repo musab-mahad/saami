@@ -9,3 +9,4 @@ from . import saami_contribution_transaction
 from . import payment_transaction
 from . import account_move
 from . import res_config_settings
+from . import saami_password_reset
