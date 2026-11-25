@@ -50,9 +50,9 @@
                         <group string="Payment Details">
                             <field name="date" readonly="state == 'paid'"/>
                             <field name="amount" widget="monetary" readonly="state == 'paid'"/>
-                            <field name="processing_fee_percentage" readonly="1" invisible="not processing_fee_percentage"/>
-                            <field name="processing_fee_amount" widget="monetary" readonly="1" invisible="not processing_fee_amount"/>
-                            <field name="total_charged" widget="monetary" readonly="1" invisible="not total_charged"/>
+                            <field name="processing_fee_percentage" readonly="1"/>
+                            <field name="processing_fee_amount" widget="monetary" readonly="1"/>
+                            <field name="total_charged" widget="monetary" readonly="1"/>
                             <field name="currency_id" invisible="1"/>
                             <field name="payment_method" readonly="state == 'paid'"/>
                             <field name="payer_phone" readonly="1" invisible="not payer_phone"/>
@@ -114,8 +114,8 @@
             <xpath expr="//field[@name='amount']" position="after">
                 <field name="saami_payment_purpose" invisible="1"/>
                 <field name="saami_base_amount" widget="monetary" readonly="1" invisible="not saami_base_amount"/>
-                <field name="saami_processing_fee_percentage" readonly="1" invisible="not saami_processing_fee_percentage"/>
-                <field name="saami_processing_fee_amount" widget="monetary" readonly="1" invisible="not saami_processing_fee_amount"/>
+                <field name="saami_processing_fee_percentage" readonly="1" invisible="not saami_payment_purpose"/>
+                <field name="saami_processing_fee_amount" widget="monetary" readonly="1" invisible="not saami_payment_purpose"/>
                 <field name="saami_payer_phone" readonly="1" invisible="not saami_payer_phone"/>
             </xpath>
         </field>
