@@ -18,45 +18,37 @@ class SaamiMemberApplication(models.Model):
     partner_id = fields.Many2one('res.partner', string='Partner', ondelete='restrict', copy=False)
     user_id = fields.Many2one('res.users', string='Portal User', copy=False)
 
-    first_name = fields.Char(string='First Name', required=True, tracking=True)
-    middle_name = fields.Char(string='Middle Name', required=True, tracking=True)
-    last_name = fields.Char(string='Last Name', required=True, tracking=True)
-    full_name = fields.Char(string='Full Name', compute='_compute_full_name', store=True)
+    first_name = fields.Char(string='First Name', tracking=True)
+    middle_name = fields.Char(string='Middle Name', tracking=True)
+    last_name = fields.Char(string='Last Name', tracking=True)
+    full_name = fields.Char(string='Full Name', compute='_compute_full_name', store=True, readonly=False)
 
-    mobile = fields.Char(string='Mobile', required=True, tracking=True)
+    mobile = fields.Char(string='Mobile', tracking=True)
     email = fields.Char(string='Email', required=True, tracking=True)
 
-    mother_name = fields.Char(string='Mother Name', required=True)
-    date_of_birth = fields.Date(string='Date of Birth', required=True)
+    mother_name = fields.Char(string='Mother Name')
+    date_of_birth = fields.Date(string='Date of Birth')
     gender = fields.Selection([
         ('male', 'Male'),
         ('female', 'Female'),
-    ], string='Gender', required=True)
-    education_level = fields.Char(string='Education Level', required=True)
+    ], string='Gender')
+    education_level = fields.Char(string='Education Level')
 
     # Address / Location
-    country_id = fields.Many2one('res.country', string='Country of Residence', required=True)
-    state_id = fields.Many2one('res.country.state', string='Home Region', domain="[('country_id.code', '=', 'SO')]", required=True)
-    district_id = fields.Many2one('saami.district', string='Home District', domain="[('state_id', '=?', state_id)]", required=True)
+    country_id = fields.Many2one('res.country', string='Country of Residence')
+    state_id = fields.Many2one('res.country.state', string='Home Region', domain="[('country_id.code', '=', 'SO')]")
+    district_id = fields.Many2one('saami.district', string='Home District', domain="[('state_id', '=?', state_id)]")
     district = fields.Char(string='District')
-    residence_address = fields.Text(string='Address of Residence', required=True)
+    residence_address = fields.Text(string='Address of Residence')
 
-    # Bank Details (optional)
-    bank_name = fields.Char(string='Bank Name')
-    bank_address = fields.Char(string='Bank Address')
-    bank_account_no = fields.Char(string='Bank Account Number')
+    # Next of Kin (1 person)
+    kin_name = fields.Char(string='Next of Kin Name')
+    kin_mobile = fields.Char(string='Next of Kin Mobile')
+    kin_document_type = fields.Char(string='Next of Kin Document Type')
+    kin_document_country_id = fields.Many2one('res.country', string='Next of Kin Document Country')
+    kin_document_number = fields.Char(string='Next of Kin Document Number')
 
-    # Next of Kin 1
-    kin1_name = fields.Char(string='Next of Kin 1 Name', required=True)
-    kin1_address = fields.Char(string='Next of Kin 1 Address', required=True)
-    kin1_mobile = fields.Char(string='Next of Kin 1 Mobile', required=True)
-
-    # Next of Kin 2 (Optional)
-    kin2_name = fields.Char(string='Next of Kin 2 Name')
-    kin2_address = fields.Char(string='Next of Kin 2 Address')
-    kin2_mobile = fields.Char(string='Next of Kin 2 Mobile')
-
-    # KYC Attachments (Optional)
+    # KYC Attachments & Optional Member ID Metadata
     photo = fields.Binary(string='Photo', attachment=True)
     identity_file = fields.Binary(string='Identity Document', attachment=True)
     identity_filename = fields.Char(
@@ -66,15 +58,18 @@ class SaamiMemberApplication(models.Model):
         readonly=False,
         copy=False,
     )
+    id_document_type = fields.Char(string='ID Document Type')
+    id_document_country_id = fields.Many2one('res.country', string='ID Document Country')
+    id_document_number = fields.Char(string='ID Document Number')
 
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('pending_payment', 'Pending Payment'),
         ('pending_approval', 'Pending Approval'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
         ('cancelled', 'Cancelled'),
     ], string='Status', default='draft', tracking=True, copy=False)
+    rejection_reason = fields.Text(string='Rejection Reason', tracking=True, copy=False)
 
     member_id = fields.Many2one('saami.member', string='Member Record', readonly=True, copy=False)
     invoice_id = fields.Many2one('account.move', string='Registration Invoice', readonly=True, copy=False)
@@ -102,7 +97,9 @@ class SaamiMemberApplication(models.Model):
     def _compute_full_name(self):
         for rec in self:
             names = [rec.first_name, rec.middle_name, rec.last_name]
-            rec.full_name = ' '.join(filter(None, names))
+            joined = ' '.join(filter(None, names))
+            if joined:
+                rec.full_name = joined
 
     @api.depends('identity_file', 'name')
     def _compute_identity_filename(self):
@@ -167,24 +164,37 @@ class SaamiMemberApplication(models.Model):
                     ResUsers._saami_sync_login_email(rec.partner_id, rec.email, extra_users=rec.user_id)
         return res
 
+    def _get_missing_kyc_fields(self):
+        """Return list of required KYC field names missing on this application."""
+        self.ensure_one()
+        required = [
+            'first_name', 'middle_name', 'last_name', 'mother_name',
+            'gender', 'date_of_birth', 'mobile',
+            'country_id', 'state_id', 'district_id', 'residence_address',
+            'kin_name', 'kin_mobile', 'kin_document_type',
+            'kin_document_country_id', 'kin_document_number',
+            'photo', 'identity_file',
+        ]
+        return [f for f in required if not getattr(self, f)]
+
     def action_submit(self):
-        """Submit draft application: ensure registration invoice is created and posted, then advance state."""
+        """Submit draft/rejected application after validating KYC fields and paid registration fee."""
         for rec in self:
-            if rec.state != 'draft':
+            if rec.state not in ('draft', 'rejected'):
                 continue
-            if not rec.invoice_id:
-                rec.action_create_registration_invoice()
-            else:
-                if rec.invoice_id.state == 'draft':
-                    rec.invoice_id.action_post()
-                if rec.invoice_id.payment_state in ('paid', 'in_payment'):
-                    rec.state = 'pending_approval'
-                else:
-                    rec.state = 'pending_payment'
+            missing = rec._get_missing_kyc_fields()
+            if missing:
+                raise ValidationError(_("Please complete all required KYC fields before submitting: %s") % ', '.join(missing))
+            if not rec.invoice_id or rec.invoice_id.payment_state not in ('paid', 'in_payment') or rec.invoice_id.amount_residual > 0:
+                raise UserError(_("Please complete the registration fee payment before submitting."))
+            rec.write({
+                'state': 'pending_approval',
+                'rejection_reason': False,
+            })
             if hasattr(rec, 'with_delay'):
-                rec.sudo().with_delay()._send_application_received_email()
+                rec.sudo().with_delay()._send_payment_received_email()
             else:
-                rec.sudo()._send_application_received_email()
+                rec.sudo()._send_payment_received_email()
 
     def _send_application_received_email(self):
         """Send email acknowledging application submission (async via queue_job)."""
@@ -265,7 +275,6 @@ class SaamiMemberApplication(models.Model):
             })
             invoice.action_post()
             rec.invoice_id = invoice.id
-            rec.state = 'pending_payment'
 
     def action_create_user(self):
         """Open user creation wizard for the application."""
@@ -414,18 +423,17 @@ class SaamiMemberApplication(models.Model):
                 'district_id': rec.district_id.id if rec.district_id else False,
                 'district': rec.district_id.name if rec.district_id else (rec.district or ''),
                 'residence_address': rec.residence_address,
-                'bank_name': rec.bank_name,
-                'bank_address': rec.bank_address,
-                'bank_account_no': rec.bank_account_no,
-                'kin1_name': rec.kin1_name,
-                'kin1_address': rec.kin1_address,
-                'kin1_mobile': rec.kin1_mobile,
-                'kin2_name': rec.kin2_name,
-                'kin2_address': rec.kin2_address,
-                'kin2_mobile': rec.kin2_mobile,
+                'kin_name': rec.kin_name,
+                'kin_mobile': rec.kin_mobile,
+                'kin_document_type': rec.kin_document_type,
+                'kin_document_country_id': rec.kin_document_country_id.id if rec.kin_document_country_id else False,
+                'kin_document_number': rec.kin_document_number,
                 'photo': rec.photo,
                 'identity_file': rec.identity_file,
                 'identity_filename': rec.identity_filename,
+                'id_document_type': rec.id_document_type,
+                'id_document_country_id': rec.id_document_country_id.id if rec.id_document_country_id else False,
+                'id_document_number': rec.id_document_number,
                 'state': 'active',
             })
             rec.member_id = member.id
@@ -447,7 +455,22 @@ class SaamiMemberApplication(models.Model):
                 rec.sudo()._send_application_approved_email()
 
     def action_reject(self):
-        self.write({'state': 'rejected'})
+        """Open rejection reason wizard."""
+        self.ensure_one()
+        return {
+            'name': _('Reject Application'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'saami.reject.application.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_application_id': self.id},
+        }
+
+    def _do_reject(self, reason):
+        self.write({
+            'state': 'rejected',
+            'rejection_reason': reason,
+        })
         for rec in self:
             if hasattr(rec, 'with_delay'):
                 rec.sudo().with_delay()._send_application_rejected_email()

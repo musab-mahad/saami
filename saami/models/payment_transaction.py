@@ -136,8 +136,7 @@ class PaymentTransaction(models.Model):
                         _logger.warning("Could not auto-register payment for registration invoice %s: %s", app.invoice_id.name, e, exc_info=True)
 
                 if app.invoice_id and app.invoice_id.payment_state in ('paid', 'in_payment') and app.invoice_id.amount_residual <= 0:
-                    app.write({'state': 'pending_approval'})
-                    _logger.info("Application %s transitioned to pending_approval (invoice %s state=%s, residual=%s)",
+                    _logger.info("Registration fee paid in full for application %s (invoice %s state=%s, residual=%s); awaiting KYC submission.",
                                  app.name, app.invoice_id.name, app.invoice_id.payment_state, app.invoice_id.amount_residual)
                     if hasattr(app, 'with_delay'):
                         app.sudo().with_delay()._send_payment_received_email()

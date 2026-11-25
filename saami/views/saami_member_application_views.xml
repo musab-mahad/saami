@@ -5,7 +5,7 @@
         <field name="name">saami.member.application.list</field>
         <field name="model">saami.member.application</field>
         <field name="arch" type="xml">
-            <list string="Member Applications" decoration-info="state == 'draft'" decoration-warning="state in ('pending_payment', 'pending_approval')" decoration-success="state == 'approved'" decoration-muted="state in ('rejected', 'cancelled')">
+            <list string="Member Applications" decoration-info="state == 'draft'" decoration-warning="state == 'pending_approval'" decoration-success="state == 'approved'" decoration-muted="state in ('rejected', 'cancelled')">
                 <field name="name"/>
                 <field name="full_name"/>
                 <field name="mobile"/>
@@ -13,7 +13,7 @@
                 <field name="district_id"/>
                 <field name="state_id"/>
                 <field name="create_date" string="Applied On"/>
-                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state in ('pending_payment', 'pending_approval')" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'" decoration-muted="state == 'cancelled'"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'pending_approval'" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'" decoration-muted="state == 'cancelled'"/>
             </list>
         </field>
     </record>
@@ -25,13 +25,12 @@
         <field name="arch" type="xml">
             <form string="Member Application">
                 <header>
-                    <button name="action_submit" string="Submit Application" type="object" class="oe_highlight" invisible="state != 'draft'"/>
-                    <button name="action_register_payment" string="Register Payment" type="object" class="oe_highlight" invisible="state != 'pending_payment' or not invoice_id or invoice_payment_state in ('paid', 'in_payment')"/>
-                    <button name="action_check_payment" string="Check Payment" type="object" class="btn-secondary" invisible="state != 'pending_payment' or not invoice_id"/>
+                    <button name="action_submit" string="Submit Application" type="object" class="oe_highlight" invisible="state not in ('draft', 'rejected')"/>
+                    <button name="action_register_payment" string="Register Payment" type="object" class="oe_highlight" invisible="state not in ('draft', 'rejected') or not invoice_id or invoice_payment_state in ('paid', 'in_payment')"/>
                     <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state != 'pending_approval'"/>
                     <button name="action_reject" string="Reject" type="object" invisible="state in ('approved', 'rejected', 'cancelled')"/>
                     <button name="action_cancel" string="Cancel" type="object" invisible="state in ('approved', 'cancelled')"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,pending_payment,pending_approval,approved"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending_approval,approved"/>
                 </header>
                 <sheet>
                     <field name="invoice_payment_state" invisible="1"/>
@@ -84,27 +83,20 @@
                             <field name="residence_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
                         </group>
                     </group>
+                    <group invisible="not rejection_reason">
+                        <field name="rejection_reason" readonly="1"/>
+                    </group>
                     <notebook>
                         <page string="Next of Kin" name="kin">
                             <group>
-                                <group string="First Next of Kin">
-                                    <field name="kin1_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-                                    <field name="kin1_mobile" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-                                    <field name="kin1_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                <group string="Next of Kin Details">
+                                    <field name="kin_name" readonly="state in ('approved', 'cancelled')"/>
+                                    <field name="kin_mobile" readonly="state in ('approved', 'cancelled')"/>
                                 </group>
-                                <group string="Second Next of Kin">
-                                    <field name="kin2_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-                                    <field name="kin2_mobile" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-                                    <field name="kin2_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-                                </group>
-                            </group>
-                        </page>
-                        <page string="Banking Details" name="banking">
-                            <group>
-                                <group>
-                                    <field name="bank_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-                                    <field name="bank_account_no" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-                                    <field name="bank_address" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                <group string="Next of Kin Identification">
+                                    <field name="kin_document_type" readonly="state in ('approved', 'cancelled')"/>
+                                    <field name="kin_document_country_id" options="{'no_open': True, 'no_create': True}" readonly="state in ('approved', 'cancelled')"/>
+                                    <field name="kin_document_number" readonly="state in ('approved', 'cancelled')"/>
                                 </group>
                             </group>
                         </page>
@@ -112,7 +104,12 @@
                             <group>
                                 <group>
                                     <field name="identity_filename" invisible="1"/>
-                                    <field name="identity_file" filename="identity_filename" class="saami_binary_no_text_click" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+                                    <field name="identity_file" filename="identity_filename" class="saami_binary_no_text_click" readonly="state in ('approved', 'cancelled')"/>
+                                </group>
+                                <group string="ID Metadata (Optional)">
+                                    <field name="id_document_type" readonly="state in ('approved', 'cancelled')"/>
+                                    <field name="id_document_country_id" options="{'no_open': True, 'no_create': True}" readonly="state in ('approved', 'cancelled')"/>
+                                    <field name="id_document_number" readonly="state in ('approved', 'cancelled')"/>
                                 </group>
                             </group>
                         </page>

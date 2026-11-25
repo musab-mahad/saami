@@ -4,6 +4,7 @@ from odoo import http, fields, _
 from odoo.http import request
 
 from .jwt_utils import send_json, handle_cors, get_json_body, get_request_payload, parse_base64_file, require_jwt
+from .auth_controller import _get_api_base_url
 
 _logger = logging.getLogger(__name__)
 
@@ -101,38 +102,40 @@ class SaamiApiController(http.Controller):
             return send_json({'code': 'SERVER_ERROR', 'message': str(e)}, status=500)
 
     # -------------------------------------------------------------------------
-    # 1. PUBLIC REGISTRATION
+    # 1. PUBLIC ACCOUNT REGISTRATION (BARE MINIMUM + EMAIL VERIFICATION)
     # -------------------------------------------------------------------------
     @http.route('/api/saami/register', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
     def register(self):
         """
-        Public applicant registration endpoint:
-        Creates res.partner, res.users (portal), and saami.member.application.
-        Automatically generates the registration fee invoice.
+        Bare-minimum public signup: full_name, email, password only.
+        Creates partner, unverified portal user, and a draft application.
+        Sends a 6-digit email verification code; does NOT return a JWT.
         """
         preflight = handle_cors(['POST', 'OPTIONS'])
         if preflight:
             return preflight
 
-        data = get_request_payload()
+        data = get_json_body()
         if not data:
-            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON or multipart/form-data payload is required.'}, status=400)
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
 
-        required_fields = ['first_name', 'middle_name', 'last_name', 'mother_name', 'mobile', 'email', 'password', 'date_of_birth', 'gender', 'education_level', 'country_id', 'state_id', 'district_id', 'residence_address', 'kin1_name', 'kin1_mobile', 'kin1_address', 'photo', 'identity_file']
-        missing = [f for f in required_fields if not data.get(f)]
+        full_name = (data.get('full_name') or data.get('name') or '').strip()
+        email = (data.get('email') or data.get('login') or '').strip().lower()
+        password = data.get('password') or ''
+
+        missing = []
+        if not full_name:
+            missing.append('full_name')
+        if not email:
+            missing.append('email')
+        if not password:
+            missing.append('password')
         if missing:
             return send_json({'code': 'VALIDATION_ERROR', 'message': f"Missing required fields: {', '.join(missing)}"}, status=400)
 
-        photo_b64 = parse_base64_file(data.get('photo'))
-        if not photo_b64:
-            return send_json({'code': 'VALIDATION_ERROR', 'message': 'A valid profile photo (photo) is required.'}, status=400)
+        if len(password) < 8:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': 'Password must be at least 8 characters long.'}, status=400)
 
-        identity_b64 = parse_base64_file(data.get('identity_file'))
-        if not identity_b64:
-            return send_json({'code': 'VALIDATION_ERROR', 'message': 'A valid identity document (identity_file) is required.'}, status=400)
-        identity_filename = data.get('identity_file_filename') or data.get('identity_filename') or f"identity_{email}.png"
-
-        email = data['email'].strip().lower()
         bot_env = get_saami_bot_env()
         Application = bot_env['saami.member.application']
         Users = bot_env['res.users']
@@ -140,199 +143,301 @@ class SaamiApiController(http.Controller):
         existing_app = Application.search([('email', '=ilike', email)], limit=1)
         existing_user = Users.search([('login', '=ilike', email)], limit=1)
 
-        if existing_app:
-            if existing_app.state not in ('cancelled', 'rejected'):
-                return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account or active application with this email already exists.'}, status=400)
-        elif existing_user:
+        if existing_app and existing_app.state not in ('cancelled',):
+            return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account or active application with this email already exists.'}, status=400)
+        if existing_user:
             return send_json({'code': 'EMAIL_EXISTS', 'message': 'An account with this email already exists.'}, status=400)
 
         try:
             company = bot_env.company
-            state_id = int(data['state_id'])
-            district_id = int(data['district_id'])
-            district_rec = bot_env['saami.district'].browse(district_id)
-            district_name = district_rec.name if district_rec.exists() else (data.get('district') or '')
-            full_name = f"{data['first_name']} {data['middle_name']} {data['last_name']}".strip()
+            portal_group = bot_env.ref('base.group_portal')
 
-            if existing_app:
-                # Re-apply for a previously cancelled or rejected application
-                partner = existing_app.partner_id
-                if partner:
-                    partner.write({
-                        'name': full_name,
-                        'email': email,
-                        'phone': data['mobile'],
-                        'street': data['residence_address'],
-                        'country_id': int(data['country_id']),
-                        'state_id': state_id,
-                        'city': district_name,
-                        'image_1920': photo_b64,
-                    })
-                else:
-                    partner = bot_env['res.partner'].create({
-                        'name': full_name,
-                        'email': email,
-                        'phone': data['mobile'],
-                        'street': data['residence_address'],
-                        'country_id': int(data['country_id']),
-                        'state_id': state_id,
-                        'city': district_name,
-                        'image_1920': photo_b64,
-                        'company_id': company.id,
-                    })
-                    existing_app.partner_id = partner.id
+            partner = bot_env['res.partner'].create({
+                'name': full_name,
+                'email': email,
+                'company_id': company.id,
+            })
 
-                portal_group = bot_env.ref('base.group_portal')
-                user = existing_app.user_id or existing_user
-                if user:
-                    user.write({
-                        'name': full_name,
-                        'password': data['password'],
-                        'active': True,
-                    })
-                else:
-                    user = bot_env['res.users'].with_context(
-                        no_reset_password=True,
-                        mail_create_nosubscribe=True,
-                        mail_create_nolog=True,
-                        signup_valid=False,
-                    ).create({
-                        'name': full_name,
-                        'login': email,
-                        'email': email,
-                        'password': data['password'],
-                        'partner_id': partner.id,
-                        'company_id': company.id,
-                        'company_ids': [(6, 0, [company.id])],
-                        'groups_id': [(6, 0, [portal_group.id])],
-                    })
-                existing_app.user_id = user.id
-                existing_app.partner_id = user.partner_id.id
+            user = bot_env['res.users'].with_context(
+                no_reset_password=True,
+                mail_create_nosubscribe=True,
+                mail_create_nolog=True,
+                signup_valid=False,
+            ).create({
+                'name': full_name,
+                'login': email,
+                'email': email,
+                'password': password,
+                'partner_id': partner.id,
+                'company_id': company.id,
+                'company_ids': [(6, 0, [company.id])],
+                'groups_id': [(6, 0, [portal_group.id])],
+                'saami_email_verified': False,
+            })
 
-                # Cancel previous unpaid invoice and detach to force a fresh invoice
-                if existing_app.invoice_id:
-                    if existing_app.invoice_id.payment_state not in ('paid', 'in_payment') and existing_app.invoice_id.state != 'cancel':
-                        existing_app.invoice_id.button_cancel()
-                    existing_app.invoice_id = False
+            bot_env['saami.member.application'].create({
+                'partner_id': partner.id,
+                'user_id': user.id,
+                'full_name': full_name,
+                'email': email,
+                'state': 'draft',
+            })
 
-                app_vals = {
-                    'first_name': data['first_name'],
-                    'middle_name': data['middle_name'],
-                    'last_name': data['last_name'],
-                    'mother_name': data['mother_name'],
-                    'mobile': data['mobile'],
-                    'date_of_birth': data['date_of_birth'],
-                    'gender': data['gender'],
-                    'education_level': data['education_level'],
-                    'country_id': int(data['country_id']),
-                    'state_id': state_id,
-                    'district_id': district_id,
-                    'district': district_name,
-                    'residence_address': data['residence_address'],
-                    'bank_name': data.get('bank_name'),
-                    'bank_address': data.get('bank_address'),
-                    'bank_account_no': data.get('bank_account_no'),
-                    'kin1_name': data['kin1_name'],
-                    'kin1_address': data['kin1_address'],
-                    'kin1_mobile': data['kin1_mobile'],
-                    'kin2_name': data.get('kin2_name'),
-                    'kin2_address': data.get('kin2_address'),
-                    'kin2_mobile': data.get('kin2_mobile'),
-                    'photo': photo_b64,
-                    'identity_file': identity_b64,
-                    'identity_filename': identity_filename,
-                    'state': 'pending_payment',
-                    'email_payment_received_sent': False,
-                }
-                existing_app.write(app_vals)
-                application = existing_app
-            else:
-                # 1. Create Partner
-                partner = bot_env['res.partner'].create({
-                    'name': full_name,
-                    'email': email,
-                    'phone': data['mobile'],
-                    'street': data['residence_address'],
-                    'country_id': int(data['country_id']),
-                    'state_id': state_id,
-                    'city': district_name,
-                    'image_1920': photo_b64,
-                    'company_id': company.id,
-                })
-
-                # 2. Create Portal User (suppress default Odoo connect/invitation email)
-                portal_group = bot_env.ref('base.group_portal')
-                user = bot_env['res.users'].with_context(
-                    no_reset_password=True,
-                    mail_create_nosubscribe=True,
-                    mail_create_nolog=True,
-                    signup_valid=False,
-                ).create({
-                    'name': full_name,
-                    'login': email,
-                    'email': email,
-                    'password': data['password'],
-                    'partner_id': partner.id,
-                    'company_id': company.id,
-                    'company_ids': [(6, 0, [company.id])],
-                    'groups_id': [(6, 0, [portal_group.id])],
-                })
-
-                # 3. Create Application
-                app_vals = {
-                    'partner_id': partner.id,
-                    'user_id': user.id,
-                    'first_name': data['first_name'],
-                    'middle_name': data['middle_name'],
-                    'last_name': data['last_name'],
-                    'mother_name': data['mother_name'],
-                    'mobile': data['mobile'],
-                    'email': email,
-                    'date_of_birth': data['date_of_birth'],
-                    'gender': data['gender'],
-                    'education_level': data['education_level'],
-                    'country_id': int(data['country_id']),
-                    'state_id': state_id,
-                    'district_id': district_id,
-                    'district': district_name,
-                    'residence_address': data['residence_address'],
-                    'bank_name': data.get('bank_name'),
-                    'bank_address': data.get('bank_address'),
-                    'bank_account_no': data.get('bank_account_no'),
-                    'kin1_name': data['kin1_name'],
-                    'kin1_address': data['kin1_address'],
-                    'kin1_mobile': data['kin1_mobile'],
-                    'kin2_name': data.get('kin2_name'),
-                    'kin2_address': data.get('kin2_address'),
-                    'kin2_mobile': data.get('kin2_mobile'),
-                    'photo': photo_b64,
-                    'identity_file': identity_b64,
-                    'identity_filename': identity_filename,
-                    'state': 'pending_payment',
-                }
-                application = bot_env['saami.member.application'].create(app_vals)
-
-            # 4. Generate Registration Invoice
-            application.action_create_registration_invoice()
-
-            # 5. Send Welcome & Application Received Email (Async via queue_job)
-            if hasattr(application, 'with_delay'):
-                application.with_delay()._send_application_received_email()
-            else:
-                application._send_application_received_email()
+            forwarded_for = (request.httprequest.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+            ip_addr = forwarded_for or request.httprequest.remote_addr
+            bot_env['saami.password.reset'].sudo()._request_email_verification(
+                email, ip_addr=ip_addr, skip_rate_limit=True,
+            )
 
             return send_json({
                 'code': 'SUCCESS',
-                'message': 'Registration submitted successfully. Please proceed with registration fee payment.',
-                'application_number': application.name,
-                'status': application.state,
-                'invoice_id': application.invoice_id.id if application.invoice_id else False,
-                'amount_due': application.invoice_id.amount_residual if application.invoice_id else 0.0,
+                'message': 'Account created. Please check your email for the 6-digit verification code.',
             }, status=201)
 
         except Exception as e:
             _logger.error("Registration error: %s", str(e), exc_info=True)
             return send_json({'code': 'SERVER_ERROR', 'message': str(e)}, status=500)
+
+    # -------------------------------------------------------------------------
+    # 1B. KYC DRAFT, UNIFIED SAVE (DATA + DOCS), AND SUBMIT
+    # -------------------------------------------------------------------------
+    def _serialize_kyc(self, app):
+        base_url = _get_api_base_url()
+        inv = app.invoice_id
+        photo_url = f"{base_url}/api/saami/application/{app.id}/photo" if (app.photo or app.partner_id.image_1920) else None
+        identity_url = f"{base_url}/api/saami/application/{app.id}/identity" if app.identity_file else None
+        return {
+            'code': 'SUCCESS',
+            'status': app.state,
+            'can_edit': app.state in ('draft', 'rejected'),
+            'rejection_reason': app.rejection_reason or None,
+            'application_id': app.id,
+            'application_number': app.name,
+            'kyc': {
+                'first_name': app.first_name or None,
+                'middle_name': app.middle_name or None,
+                'last_name': app.last_name or None,
+                'full_name': app.full_name or None,
+                'mother_name': app.mother_name or None,
+                'gender': app.gender or None,
+                'date_of_birth': str(app.date_of_birth) if app.date_of_birth else None,
+                'mobile': app.mobile or None,
+                'email': app.email or None,
+                'education_level': app.education_level or None,
+                'country_id': app.country_id.id if app.country_id else None,
+                'country': app.country_id.name if app.country_id else None,
+                'region_id': app.state_id.id if app.state_id else None,
+                'region': app.state_id.name if app.state_id else None,
+                'district_id': app.district_id.id if app.district_id else None,
+                'district': app.district_id.name if app.district_id else (app.district or None),
+                'residence_address': app.residence_address or None,
+                'next_of_kin': {
+                    'name': app.kin_name or None,
+                    'mobile': app.kin_mobile or None,
+                    'document_type': app.kin_document_type or None,
+                    'document_country_id': app.kin_document_country_id.id if app.kin_document_country_id else None,
+                    'document_country': app.kin_document_country_id.name if app.kin_document_country_id else None,
+                    'document_number': app.kin_document_number or None,
+                },
+                'id_document_type': app.id_document_type or None,
+                'id_document_country_id': app.id_document_country_id.id if app.id_document_country_id else None,
+                'id_document_country': app.id_document_country_id.name if app.id_document_country_id else None,
+                'id_document_number': app.id_document_number or None,
+                'image_url': photo_url,
+                'identity_url': identity_url,
+            },
+            'registration': {
+                'invoice_id': inv.id if inv else False,
+                'amount_total': inv.amount_total if inv else 0.0,
+                'amount_due': inv.amount_residual if inv else 0.0,
+                'currency': (inv.currency_id.name or 'USD') if inv else 'USD',
+                'payment_status': inv.payment_state if inv else 'not_paid',
+                'is_paid': (inv.payment_state in ('paid', 'in_payment') and inv.amount_residual <= 0) if inv else False,
+            },
+        }
+
+    def _get_user_application(self, user):
+        return request.env['saami.member.application'].sudo().search([
+            '|', ('user_id', '=', user.id), ('partner_id', '=', user.partner_id.id)
+        ], limit=1)
+
+    @http.route('/api/saami/kyc', type='http', auth='none', methods=['GET', 'PUT', 'POST', 'PATCH', 'OPTIONS'], csrf=False)
+    @require_jwt
+    def kyc(self, user):
+        """
+        GET: Return current KYC draft/status and registration fee state.
+        PUT/POST/PATCH: Unified draft save for any partial KYC fields and/or photo & identity_file
+        (supports both multipart/form-data and JSON).
+        """
+        app = self._get_user_application(user)
+        if not app:
+            return send_json({'code': 'NOT_FOUND', 'message': 'No application found for this account.'}, status=404)
+
+        if request.httprequest.method == 'GET':
+            return send_json(self._serialize_kyc(app), status=200)
+
+        if app.state not in ('draft', 'rejected'):
+            return send_json({
+                'code': 'FORBIDDEN',
+                'message': f"Application cannot be edited while in '{app.state}' status.",
+            }, status=403)
+
+        data = get_request_payload()
+        if not data:
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON or multipart/form-data payload is required.'}, status=400)
+
+        app_vals = {}
+        partner_vals = {}
+
+        # Personal text fields
+        for field_name in ('first_name', 'middle_name', 'last_name', 'mother_name', 'gender', 'date_of_birth', 'education_level', 'residence_address', 'mobile'):
+            if field_name in data:
+                val = data.get(field_name)
+                if isinstance(val, str):
+                    val = val.strip()
+                app_vals[field_name] = val or False
+
+        if 'mobile' in app_vals and app_vals['mobile']:
+            partner_vals['phone'] = app_vals['mobile']
+        if 'residence_address' in app_vals and app_vals['residence_address']:
+            partner_vals['street'] = app_vals['residence_address']
+
+        # Location references
+        if 'country_id' in data:
+            cid = data.get('country_id')
+            if cid:
+                country = request.env['res.country'].sudo().browse(int(cid))
+                if not country.exists():
+                    return send_json({'code': 'INVALID_COUNTRY', 'message': 'Country not found.'}, status=400)
+                app_vals['country_id'] = country.id
+                partner_vals['country_id'] = country.id
+            else:
+                app_vals['country_id'] = False
+
+        if 'state_id' in data or 'region_id' in data:
+            sid = data.get('state_id') if 'state_id' in data else data.get('region_id')
+            if sid:
+                state_rec = request.env['res.country.state'].sudo().browse(int(sid))
+                if not state_rec.exists():
+                    return send_json({'code': 'INVALID_REGION', 'message': 'Region not found.'}, status=400)
+                app_vals['state_id'] = state_rec.id
+                partner_vals['state_id'] = state_rec.id
+            else:
+                app_vals['state_id'] = False
+
+        if 'district_id' in data:
+            did = data.get('district_id')
+            if did:
+                district_rec = request.env['saami.district'].sudo().browse(int(did))
+                if not district_rec.exists():
+                    return send_json({'code': 'INVALID_DISTRICT', 'message': 'District not found.'}, status=400)
+                app_vals['district_id'] = district_rec.id
+                app_vals['district'] = district_rec.name
+                partner_vals['city'] = district_rec.name
+            else:
+                app_vals['district_id'] = False
+                app_vals['district'] = False
+
+        # Next of kin (1 person)
+        kin_map = {
+            'kin_name': ('kin_name', 'kin1_name'),
+            'kin_mobile': ('kin_mobile', 'kin1_mobile'),
+            'kin_document_type': ('kin_document_type',),
+            'kin_document_number': ('kin_document_number',),
+        }
+        for target_field, keys in kin_map.items():
+            for k in keys:
+                if k in data:
+                    val = data.get(k)
+                    app_vals[target_field] = val.strip() if isinstance(val, str) else (val or False)
+                    break
+
+        if 'kin_document_country_id' in data:
+            k_cid = data.get('kin_document_country_id')
+            if k_cid:
+                k_country = request.env['res.country'].sudo().browse(int(k_cid))
+                if not k_country.exists():
+                    return send_json({'code': 'INVALID_COUNTRY', 'message': 'Next of kin document country not found.'}, status=400)
+                app_vals['kin_document_country_id'] = k_country.id
+            else:
+                app_vals['kin_document_country_id'] = False
+
+        # Optional member ID metadata
+        if 'id_document_type' in data:
+            app_vals['id_document_type'] = (data.get('id_document_type') or '').strip() or False
+        if 'id_document_number' in data:
+            app_vals['id_document_number'] = (data.get('id_document_number') or '').strip() or False
+        if 'id_document_country_id' in data:
+            m_cid = data.get('id_document_country_id')
+            if m_cid:
+                m_country = request.env['res.country'].sudo().browse(int(m_cid))
+                if not m_country.exists():
+                    return send_json({'code': 'INVALID_COUNTRY', 'message': 'Member ID document country not found.'}, status=400)
+                app_vals['id_document_country_id'] = m_country.id
+            else:
+                app_vals['id_document_country_id'] = False
+
+        # Documents (photo & identity_file)
+        if 'photo' in data and data.get('photo'):
+            photo_b64 = parse_base64_file(data.get('photo'))
+            if not photo_b64:
+                return send_json({'code': 'VALIDATION_ERROR', 'message': 'Invalid profile photo format.'}, status=400)
+            app_vals['photo'] = photo_b64
+            partner_vals['image_1920'] = photo_b64
+
+        if 'identity_file' in data and data.get('identity_file'):
+            identity_b64 = parse_base64_file(data.get('identity_file'))
+            if not identity_b64:
+                return send_json({'code': 'VALIDATION_ERROR', 'message': 'Invalid identity document format.'}, status=400)
+            app_vals['identity_file'] = identity_b64
+            app_vals['identity_filename'] = (
+                data.get('identity_file_filename')
+                or data.get('identity_filename')
+                or f"identity_{app.email or app.name}.png"
+            )
+
+        if app_vals:
+            app.write(app_vals)
+        if partner_vals and app.partner_id:
+            app.partner_id.sudo().write(partner_vals)
+
+        return send_json(self._serialize_kyc(app), status=200)
+
+    @http.route('/api/saami/kyc/submit', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    @require_jwt
+    def submit_kyc(self, user):
+        """
+        Validate all required KYC fields + paid registration fee, then move application to pending_approval.
+        """
+        app = self._get_user_application(user)
+        if not app:
+            return send_json({'code': 'NOT_FOUND', 'message': 'No application found for this account.'}, status=404)
+
+        if app.state not in ('draft', 'rejected'):
+            return send_json({
+                'code': 'FORBIDDEN',
+                'message': f"Application cannot be submitted while in '{app.state}' status.",
+            }, status=403)
+
+        missing = app._get_missing_kyc_fields()
+        if missing:
+            return send_json({
+                'code': 'VALIDATION_ERROR',
+                'message': f"Missing required KYC fields: {', '.join(missing)}",
+                'missing_fields': missing,
+            }, status=400)
+
+        inv = app.invoice_id
+        if not inv or inv.payment_state not in ('paid', 'in_payment') or inv.amount_residual > 0:
+            return send_json({
+                'code': 'PAYMENT_REQUIRED',
+                'message': 'Please complete the registration fee payment before submitting.',
+            }, status=400)
+
+        app.action_submit()
+        res = self._serialize_kyc(app)
+        res['message'] = 'KYC submitted successfully and is now pending approval.'
+        return send_json(res, status=200)
 
     # -------------------------------------------------------------------------
     # 2. PAY REGISTRATION FEE (VIA WAAFIPAY USSD PUSH)
@@ -344,18 +449,19 @@ class SaamiApiController(http.Controller):
         Trigger USSD push payment for registration fee.
         """
         data = get_json_body()
-        phone = data.get('phone') or user.partner_id.phone
+        phone = (data.get('phone') or '').strip()
         if not phone:
             return send_json({'code': 'VALIDATION_ERROR', 'message': 'Mobile phone number is required for USSD payment.'}, status=400)
 
-        app = request.env['saami.member.application'].sudo().search([
-            '|', ('user_id', '=', user.id), ('partner_id', '=', user.partner_id.id)
-        ], limit=1)
+        app = self._get_user_application(user)
         if not app:
             return send_json({'code': 'NOT_FOUND', 'message': 'No application found for this account.'}, status=404)
 
         if app.state in ('approved', 'pending_approval'):
-            return send_json({'code': 'ALREADY_PAID', 'message': 'Registration fee is already submitted.'}, status=400)
+            return send_json({'code': 'ALREADY_PAID', 'message': 'Application has already been submitted.'}, status=400)
+
+        if app.invoice_id and app.invoice_id.payment_state in ('paid', 'in_payment') and app.invoice_id.amount_residual <= 0:
+            return send_json({'code': 'ALREADY_PAID', 'message': 'Registration fee is already paid in full.'}, status=400)
 
         if not app.invoice_id:
             app.action_create_registration_invoice()

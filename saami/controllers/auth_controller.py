@@ -73,19 +73,18 @@ def _build_profile_response(user):
             'country_id': member.country_id.id if member.country_id else False,
             'country': member.country_id.name if member.country_id else False,
             'residence_address': member.residence_address,
-            'bank_name': member.bank_name,
-            'bank_address': member.bank_address,
-            'bank_account_no': member.bank_account_no,
-            'next_of_kin_1': {
-                'name': member.kin1_name,
-                'mobile': member.kin1_mobile,
-                'address': member.kin1_address,
+            'next_of_kin': {
+                'name': member.kin_name,
+                'mobile': member.kin_mobile,
+                'document_type': member.kin_document_type,
+                'document_country_id': member.kin_document_country_id.id if member.kin_document_country_id else False,
+                'document_country': member.kin_document_country_id.name if member.kin_document_country_id else False,
+                'document_number': member.kin_document_number,
             },
-            'next_of_kin_2': {
-                'name': member.kin2_name,
-                'mobile': member.kin2_mobile,
-                'address': member.kin2_address,
-            },
+            'id_document_type': member.id_document_type,
+            'id_document_country_id': member.id_document_country_id.id if member.id_document_country_id else False,
+            'id_document_country': member.id_document_country_id.name if member.id_document_country_id else False,
+            'id_document_number': member.id_document_number,
             'total_contributions': member.total_contributions,
             'currency': member.currency_id.name,
             'state': member.state,
@@ -121,20 +120,20 @@ def _build_profile_response(user):
             'country_id': application.country_id.id if application.country_id else False,
             'country': application.country_id.name if application.country_id else False,
             'residence_address': application.residence_address,
-            'bank_name': application.bank_name,
-            'bank_address': application.bank_address,
-            'bank_account_no': application.bank_account_no,
-            'next_of_kin_1': {
-                'name': application.kin1_name,
-                'mobile': application.kin1_mobile,
-                'address': application.kin1_address,
+            'next_of_kin': {
+                'name': application.kin_name,
+                'mobile': application.kin_mobile,
+                'document_type': application.kin_document_type,
+                'document_country_id': application.kin_document_country_id.id if application.kin_document_country_id else False,
+                'document_country': application.kin_document_country_id.name if application.kin_document_country_id else False,
+                'document_number': application.kin_document_number,
             },
-            'next_of_kin_2': {
-                'name': application.kin2_name,
-                'mobile': application.kin2_mobile,
-                'address': application.kin2_address,
-            },
+            'id_document_type': application.id_document_type,
+            'id_document_country_id': application.id_document_country_id.id if application.id_document_country_id else False,
+            'id_document_country': application.id_document_country_id.name if application.id_document_country_id else False,
+            'id_document_number': application.id_document_number,
             'state': application.state,
+            'rejection_reason': application.rejection_reason or None,
             'invoice_id': inv.id if inv else False,
             'registration_fee': inv.amount_total if inv else 0.0,
             'amount_due': inv.amount_residual if inv else 0.0,
@@ -263,19 +262,46 @@ class SaamiAuthController(http.Controller):
                 return send_json(token_res, status=401)
 
             token_email = (token_res.get('email') or login).strip().lower()
+            token_name = (token_res.get('name') or token_email.split('@')[0]).strip()
             user = request.env['res.users'].sudo().search([('login', '=ilike', token_email)], limit=1)
 
             if not user:
-                return send_json({
-                    'code': 'USER_NOT_FOUND',
-                    'message': 'No registered member account found for this Google email. Please register first.',
-                }, status=404)
-
-            if not user.active:
+                company = request.env['res.company'].sudo().search([], limit=1)
+                portal_group = request.env.ref('base.group_portal')
+                partner = request.env['res.partner'].sudo().create({
+                    'name': token_name,
+                    'email': token_email,
+                    'company_id': company.id,
+                })
+                user = request.env['res.users'].sudo().with_context(
+                    no_reset_password=True,
+                    mail_create_nosubscribe=True,
+                    mail_create_nolog=True,
+                    signup_valid=False,
+                ).create({
+                    'name': token_name,
+                    'login': token_email,
+                    'email': token_email,
+                    'partner_id': partner.id,
+                    'company_id': company.id,
+                    'company_ids': [(6, 0, [company.id])],
+                    'groups_id': [(6, 0, [portal_group.id])],
+                    'saami_email_verified': True,
+                })
+                request.env['saami.member.application'].sudo().create({
+                    'partner_id': partner.id,
+                    'user_id': user.id,
+                    'full_name': token_name,
+                    'email': token_email,
+                    'state': 'draft',
+                })
+            elif not user.active:
                 return send_json({
                     'code': 'ACCOUNT_INACTIVE',
                     'message': 'Your account is deactivated. Please contact support.',
                 }, status=403)
+            elif not user.saami_email_verified:
+                user.sudo().write({'saami_email_verified': True})
 
             uid = user.id
         else:
@@ -304,6 +330,11 @@ class SaamiAuthController(http.Controller):
                 }, status=500)
 
             user = request.env['res.users'].sudo().browse(uid)
+            if not user.saami_email_verified:
+                return send_json({
+                    'code': 'EMAIL_NOT_VERIFIED',
+                    'message': 'Please verify your email address before signing in.',
+                }, status=403)
 
         # Find linked application and member record
         Application = request.env['saami.member.application'].sudo()
@@ -350,6 +381,7 @@ class SaamiAuthController(http.Controller):
         }
         if application and not member:
             inv = application.invoice_id
+            user_data['rejection_reason'] = application.rejection_reason or None
             user_data['registration'] = {
                 'invoice_id': inv.id if inv else False,
                 'amount_total': inv.amount_total if inv else 0.0,
@@ -413,23 +445,26 @@ class SaamiAuthController(http.Controller):
             else:
                 return send_json({'code': 'INVALID_IMAGE', 'message': 'Provided image is not a valid base64 string.'}, status=400)
 
-        # 2. Next of Kin 1
-        if 'kin1_name' in data or 'next_of_kin_name' in data:
-            member_vals['kin1_name'] = (data.get('kin1_name') or data.get('next_of_kin_name') or '').strip()
-        if 'kin1_mobile' in data or 'next_of_kin_phone' in data or 'next_of_kin_mobile' in data:
-            member_vals['kin1_mobile'] = (data.get('kin1_mobile') or data.get('next_of_kin_phone') or data.get('next_of_kin_mobile') or '').strip()
-        if 'kin1_address' in data or 'next_of_kin_address' in data:
-            member_vals['kin1_address'] = (data.get('kin1_address') or data.get('next_of_kin_address') or '').strip()
+        # 2. Next of Kin (1 person)
+        if 'kin_name' in data or 'kin1_name' in data or 'next_of_kin_name' in data:
+            member_vals['kin_name'] = (data.get('kin_name') or data.get('kin1_name') or data.get('next_of_kin_name') or '').strip()
+        if 'kin_mobile' in data or 'kin1_mobile' in data or 'next_of_kin_phone' in data or 'next_of_kin_mobile' in data:
+            member_vals['kin_mobile'] = (data.get('kin_mobile') or data.get('kin1_mobile') or data.get('next_of_kin_phone') or data.get('next_of_kin_mobile') or '').strip()
+        if 'kin_document_type' in data:
+            member_vals['kin_document_type'] = (data.get('kin_document_type') or '').strip()
+        if 'kin_document_number' in data:
+            member_vals['kin_document_number'] = (data.get('kin_document_number') or '').strip()
+        if 'kin_document_country_id' in data:
+            k_cid = data.get('kin_document_country_id')
+            if k_cid:
+                k_country = request.env['res.country'].sudo().browse(int(k_cid))
+                if not k_country.exists():
+                    return send_json({'code': 'INVALID_COUNTRY', 'message': 'Next of kin document country not found.'}, status=400)
+                member_vals['kin_document_country_id'] = k_country.id
+            else:
+                member_vals['kin_document_country_id'] = False
 
-        # 3. Next of Kin 2
-        if 'kin2_name' in data:
-            member_vals['kin2_name'] = (data.get('kin2_name') or '').strip()
-        if 'kin2_mobile' in data or 'kin2_phone' in data:
-            member_vals['kin2_mobile'] = (data.get('kin2_mobile') or data.get('kin2_phone') or '').strip()
-        if 'kin2_address' in data:
-            member_vals['kin2_address'] = (data.get('kin2_address') or '').strip()
-
-        # 4. Residence & contact details
+        # 3. Residence & contact details
         if 'residence_address' in data or 'address' in data:
             res_addr = (data.get('residence_address') or data.get('address') or '').strip()
             member_vals['residence_address'] = res_addr
@@ -443,14 +478,6 @@ class SaamiAuthController(http.Controller):
 
         if 'education_level' in data:
             member_vals['education_level'] = (data.get('education_level') or '').strip()
-
-        # 5. Bank details
-        if 'bank_name' in data:
-            member_vals['bank_name'] = (data.get('bank_name') or '').strip()
-        if 'bank_address' in data:
-            member_vals['bank_address'] = (data.get('bank_address') or '').strip()
-        if 'bank_account_no' in data or 'bank_account_number' in data:
-            member_vals['bank_account_no'] = (data.get('bank_account_no') or data.get('bank_account_number') or '').strip()
 
         # 6. Location references
         if 'district_id' in data:
@@ -594,16 +621,16 @@ class SaamiAuthController(http.Controller):
         forwarded_for = (request.httprequest.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
         ip_addr = forwarded_for or request.httprequest.remote_addr
 
-        ok, code = request.env['saami.password.reset'].sudo()._request_reset(login, ip_addr=ip_addr)
+        ok, code, msg = request.env['saami.password.reset'].sudo()._request_reset(login, ip_addr=ip_addr)
         if not ok and code == 'RATE_LIMITED':
             return send_json({
                 'code': 'RATE_LIMITED',
-                'message': 'Too many requests. Please try again later.',
+                'message': msg or 'Too many requests. Please try again later.',
             }, status=429)
         if not ok and code == 'MEMBER_SUSPENDED':
             return send_json({
                 'code': 'MEMBER_SUSPENDED',
-                'message': 'Your membership has been suspended. Please contact support.',
+                'message': msg or 'Your membership has been suspended. Please contact support.',
             }, status=403)
 
         return send_json({
@@ -611,10 +638,10 @@ class SaamiAuthController(http.Controller):
             'message': 'If this email is registered, a code has been sent.',
         }, status=200)
 
-    @http.route('/api/saami/auth/reset-password', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
-    def reset_password(self):
+    @http.route('/api/saami/auth/verify-reset-code', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    def verify_reset_code(self):
         """
-        Public endpoint to verify the 6-digit OTP and set a new password.
+        Public endpoint to verify a 6-digit password reset code and issue a short-lived reset_token.
         """
         preflight = handle_cors(['POST', 'OPTIONS'])
         if preflight:
@@ -626,6 +653,36 @@ class SaamiAuthController(http.Controller):
 
         login = (data.get('login') or data.get('email') or '').strip().lower()
         code = str(data.get('code') or '').strip()
+        if not login or not code:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': 'The code is invalid or has expired.'}, status=400)
+
+        ok, res_code, msg, reset_token = request.env['saami.password.reset'].sudo()._verify_reset_code(login, code)
+        if not ok and res_code == 'MEMBER_SUSPENDED':
+            return send_json({'code': 'MEMBER_SUSPENDED', 'message': msg}, status=403)
+        if not ok:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': msg}, status=400)
+
+        return send_json({
+            'code': 'SUCCESS',
+            'reset_token': reset_token,
+        }, status=200)
+
+    @http.route('/api/saami/auth/reset-password', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    def reset_password(self):
+        """
+        Public endpoint to set a new password using reset_token (or code).
+        """
+        preflight = handle_cors(['POST', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        data = get_json_body()
+        if not data:
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
+
+        login = (data.get('login') or data.get('email') or '').strip().lower()
+        reset_token = str(data.get('reset_token') or '').strip()
+        code = str(data.get('code') or '').strip()
         new_password = data.get('new_password') or ''
 
         if len(new_password) < 8:
@@ -634,19 +691,77 @@ class SaamiAuthController(http.Controller):
                 'message': 'New password must be at least 8 characters long.',
             }, status=400)
 
-        if not login or not code:
+        if not login or (not reset_token and not code):
             return send_json({
                 'code': 'VALIDATION_ERROR',
                 'message': 'The code is invalid or has expired.',
             }, status=400)
 
-        ok, res_code, msg = request.env['saami.password.reset'].sudo()._verify_and_reset(login, code, new_password)
+        ok, res_code, msg = request.env['saami.password.reset'].sudo()._verify_and_reset(
+            login, new_password, code=code or None, reset_token=reset_token or None,
+        )
         if not ok and res_code == 'MEMBER_SUSPENDED':
             return send_json({'code': 'MEMBER_SUSPENDED', 'message': msg}, status=403)
         if not ok:
             return send_json({'code': 'VALIDATION_ERROR', 'message': msg}, status=400)
 
         return send_json({'code': 'SUCCESS', 'message': msg}, status=200)
+
+    @http.route('/api/saami/auth/verify-email', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    def verify_email(self):
+        """
+        Public endpoint to verify a newly registered user's email with the 6-digit OTP.
+        """
+        preflight = handle_cors(['POST', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        data = get_json_body()
+        if not data:
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
+
+        login = (data.get('login') or data.get('email') or '').strip().lower()
+        code = str(data.get('code') or '').strip()
+        if not login or not code:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': 'The code is invalid or has expired.'}, status=400)
+
+        ok, res_code, msg = request.env['saami.password.reset'].sudo()._verify_email_otp(login, code)
+        if not ok:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': msg}, status=400)
+
+        return send_json({'code': 'SUCCESS', 'message': msg}, status=200)
+
+    @http.route('/api/saami/auth/resend-verification', type='http', auth='none', methods=['POST', 'OPTIONS'], csrf=False)
+    def resend_verification(self):
+        """
+        Public endpoint to resend the 6-digit email verification code (30s cooldown).
+        """
+        preflight = handle_cors(['POST', 'OPTIONS'])
+        if preflight:
+            return preflight
+
+        data = get_json_body()
+        if not data:
+            return send_json({'code': 'BAD_REQUEST', 'message': 'JSON payload is required.'}, status=400)
+
+        login = (data.get('login') or data.get('email') or '').strip().lower()
+        if not login:
+            return send_json({'code': 'VALIDATION_ERROR', 'message': 'Email address (login) is required.'}, status=400)
+
+        forwarded_for = (request.httprequest.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+        ip_addr = forwarded_for or request.httprequest.remote_addr
+
+        ok, code, msg = request.env['saami.password.reset'].sudo()._request_email_verification(login, ip_addr=ip_addr)
+        if not ok and code == 'RATE_LIMITED':
+            return send_json({
+                'code': 'RATE_LIMITED',
+                'message': msg or 'Too many requests. Please try again later.',
+            }, status=429)
+
+        return send_json({
+            'code': 'SUCCESS',
+            'message': 'If this email is registered and unverified, a verification code has been sent.',
+        }, status=200)
 
     # -------------------------------------------------------------------------
     # PUBLIC AVATAR / PHOTO STREAMING ENDPOINTS (TAAKULO PATTERN)

@@ -125,7 +125,8 @@
                     <p>Hello <t t-out="object.full_name or object.first_name or 'there'"/>,</p>
                     <p>Thank you for your interest in joining the Saami Cooperative.</p>
                     <p>After reviewing your application (<strong>#<t t-out="object.name"/></strong>), we were unable to approve your membership at this time.</p>
-                    <p>If you have any questions or would like further information, please reach out to our support team.</p>
+                    <p t-if="object.rejection_reason"><strong>Reason:</strong> <t t-out="object.rejection_reason"/></p>
+                    <p>You may update your KYC details in the Saami app and resubmit your application for review.</p>
                     <p>Best regards,<br/><strong>The Saami Team</strong></p>
                 </div>
             </field>
@@ -146,6 +147,25 @@
                     <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 16px 0;"><t t-out="ctx.get('otp_code', '')"/></p>
                     <p>This code expires in <strong>15 minutes</strong> and can only be used once.</p>
                     <p>If you did not request a password reset, you can safely ignore this email.</p>
+                    <p>Best regards,<br/><strong>The Saami Team</strong></p>
+                </div>
+            </field>
+        </record>
+
+        <!-- 7. Email Verification OTP Template -->
+        <record id="mail_template_email_verification" model="mail.template">
+            <field name="name">Saami: Email Verification Code</field>
+            <field name="model_id" ref="saami.model_saami_password_reset"/>
+            <field name="subject">Verify Your Saami Email Address</field>
+            <field name="email_from">"{{ object.env.company.name or 'Saami' }}" &lt;{{ object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user or object.env.company.partner_id.email }}&gt;</field>
+            <field name="reply_to">{{ object.env.company.partner_id.email or object.env['ir.mail_server'].sudo().search([], limit=1).smtp_user }}</field>
+            <field name="email_to">{{ object.login_email or (object.user_id and object.user_id.login) }}</field>
+            <field name="body_html" type="html">
+                <div>
+                    <p>Hello <t t-out="object.user_id.name or 'there'"/>,</p>
+                    <p>Welcome to Saami! Please verify your email address using the 6-digit code below:</p>
+                    <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 16px 0;"><t t-out="ctx.get('otp_code', '')"/></p>
+                    <p>This code expires in <strong>15 minutes</strong> and can only be used once.</p>
                     <p>Best regards,<br/><strong>The Saami Team</strong></p>
                 </div>
             </field>

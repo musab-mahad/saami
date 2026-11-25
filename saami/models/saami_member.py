@@ -47,29 +47,21 @@ class SaamiMember(models.Model):
     ], string='Gender', required=True)
     education_level = fields.Char(string='Education Level')
 
-    # Location
+    # Address / Location
     country_id = fields.Many2one('res.country', string='Country of Residence', required=True)
     state_id = fields.Many2one('res.country.state', string='Home Region', domain="[('country_id.code', '=', 'SO')]")
     district_id = fields.Many2one('saami.district', string='Home District', domain="[('state_id', '=?', state_id)]")
     district = fields.Char(string='District')
     residence_address = fields.Text(string='Address of Residence')
 
-    # Bank Details
-    bank_name = fields.Char(string='Bank Name')
-    bank_address = fields.Char(string='Bank Address')
-    bank_account_no = fields.Char(string='Bank Account Number')
+    # Next of Kin (1 person)
+    kin_name = fields.Char(string='Next of Kin Name')
+    kin_mobile = fields.Char(string='Next of Kin Mobile')
+    kin_document_type = fields.Char(string='Next of Kin Document Type')
+    kin_document_country_id = fields.Many2one('res.country', string='Next of Kin Document Country')
+    kin_document_number = fields.Char(string='Next of Kin Document Number')
 
-    # Next of Kin 1
-    kin1_name = fields.Char(string='Next of Kin 1 Name')
-    kin1_address = fields.Char(string='Next of Kin 1 Address')
-    kin1_mobile = fields.Char(string='Next of Kin 1 Mobile')
-
-    # Next of Kin 2
-    kin2_name = fields.Char(string='Next of Kin 2 Name')
-    kin2_address = fields.Char(string='Next of Kin 2 Address')
-    kin2_mobile = fields.Char(string='Next of Kin 2 Mobile')
-
-    # KYC Attachments
+    # KYC Attachments & Optional Member ID Metadata
     photo = fields.Binary(string='Photo', attachment=True)
     identity_file = fields.Binary(string='Identity Document', attachment=True)
     identity_filename = fields.Char(
@@ -79,6 +71,9 @@ class SaamiMember(models.Model):
         readonly=False,
         copy=False,
     )
+    id_document_type = fields.Char(string='ID Document Type')
+    id_document_country_id = fields.Many2one('res.country', string='ID Document Country')
+    id_document_number = fields.Char(string='ID Document Number')
 
     state = fields.Selection([
         ('active', 'Active'),
@@ -272,6 +267,11 @@ class ResUsers(models.Model):
     saami_token_version = fields.Integer(
         string='Saami Token Version',
         default=1,
+        copy=False,
+    )
+    saami_email_verified = fields.Boolean(
+        string='Saami Email Verified',
+        default=False,
         copy=False,
     )
     saami_is_suspended = fields.Boolean(
