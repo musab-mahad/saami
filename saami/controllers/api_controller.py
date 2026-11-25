@@ -4,7 +4,7 @@ from odoo import http, fields, _
 from odoo.http import request
 
 from .jwt_utils import send_json, handle_cors, get_json_body, get_request_payload, parse_base64_file, require_jwt
-from .auth_controller import _get_api_base_url
+from .auth_controller import _get_api_base_url, _build_registration_summary
 
 _logger = logging.getLogger(__name__)
 
@@ -246,14 +246,7 @@ class SaamiApiController(http.Controller):
                 'image_url': photo_url,
                 'identity_url': identity_url,
             },
-            'registration': {
-                'invoice_id': inv.id if inv else False,
-                'amount_total': inv.amount_total if inv else 0.0,
-                'amount_due': inv.amount_residual if inv else 0.0,
-                'currency': (inv.currency_id.name or 'USD') if inv else 'USD',
-                'payment_status': inv.payment_state if inv else 'not_paid',
-                'is_paid': (inv.payment_state in ('paid', 'in_payment') and inv.amount_residual <= 0) if inv else False,
-            },
+            'registration': _build_registration_summary(app),
         }
 
     def _get_user_application(self, user):
@@ -477,11 +470,12 @@ class SaamiApiController(http.Controller):
         if payment_method not in provider.payment_method_ids:
             provider.payment_method_ids = [(4, payment_method.id)]
 
-        # Create payment.transaction
-        pay_amount = float(data.get('amount')) if data.get('amount') else (invoice.amount_residual or invoice.amount_total)
+        # Create payment.transaction (full registration fee + processing fee)
+        base_amount = invoice.amount_residual or invoice.amount_total
+        fee_pct, fee_amount, total_payable = provider._waafipay_compute_fee(base_amount)
         reference = f"REG-{app.name}-{fields.Datetime.now().strftime('%Y%m%d%H%M%S')}"
         tx = request.env['payment.transaction'].sudo().create({
-            'amount': pay_amount,
+            'amount': total_payable,
             'currency_id': invoice.currency_id.id,
             'provider_id': provider.id,
             'payment_method_id': payment_method.id,
@@ -490,6 +484,9 @@ class SaamiApiController(http.Controller):
             'saami_application_id': app.id,
             'saami_payment_purpose': 'registration_fee',
             'saami_payer_phone': phone,
+            'saami_base_amount': base_amount,
+            'saami_processing_fee_percentage': fee_pct,
+            'saami_processing_fee_amount': fee_amount,
             'invoice_ids': [(4, invoice.id)],
             'operation': 'offline',
         })
@@ -499,8 +496,13 @@ class SaamiApiController(http.Controller):
             'code': 'SUCCESS' if res.get('success') else 'PAYMENT_FAILED',
             'result': res,
             'payer_phone': phone,
+            'base_amount': base_amount,
+            'processing_fee_percentage': fee_pct,
+            'processing_fee_amount': fee_amount,
+            'total_charged': total_payable,
             'created_at': tx.create_date.strftime('%Y-%m-%d %H:%M:%S') if tx.create_date else None,
             'application_status': app.state,
+            'registration': _build_registration_summary(app),
         }, status=200 if res.get('success') else 400)
 
     # -------------------------------------------------------------------------
@@ -617,6 +619,9 @@ class SaamiApiController(http.Controller):
                 'type': t.transaction_type,
                 'type_label': dict(t._fields['transaction_type'].selection).get(t.transaction_type),
                 'amount': t.amount,
+                'processing_fee_percentage': t.processing_fee_percentage or 0.0,
+                'processing_fee_amount': t.processing_fee_amount or 0.0,
+                'total_charged': t.total_charged or t.amount,
                 'currency': t.currency_id.symbol or t.currency_id.name,
                 'payment_method': t.payment_method,
                 'payer_phone': t.payer_phone or None,

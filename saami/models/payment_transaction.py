@@ -31,6 +31,21 @@ class PaymentTransaction(models.Model):
         string='Saami Payer Phone',
         copy=False,
     )
+    saami_base_amount = fields.Monetary(
+        string='Base Amount',
+        currency_field='currency_id',
+        copy=False,
+    )
+    saami_processing_fee_percentage = fields.Float(
+        string='Processing Fee (%)',
+        digits=(5, 2),
+        copy=False,
+    )
+    saami_processing_fee_amount = fields.Monetary(
+        string='Processing Fee Amount',
+        currency_field='currency_id',
+        copy=False,
+    )
 
     def _set_done(self, **kwargs):
         """
@@ -70,7 +85,7 @@ class PaymentTransaction(models.Model):
             ctx['skip_saami_sync'] = True
 
         register_vals = {
-            'amount': self.amount,
+            'amount': self.saami_base_amount or self.amount,
             'payment_date': fields.Date.context_today(self),
         }
         journal = self.provider_id.journal_id
@@ -114,13 +129,17 @@ class PaymentTransaction(models.Model):
                 _logger.info("Fulfilling Saami registration payment for application %s (tx=%s)", app.name, tx.reference)
                 # Create a transaction record for auditing/receipt
                 member = app.member_id or False
+                base_amt = tx.saami_base_amount or tx.amount
                 self.env['saami.contribution.transaction'].sudo().create({
                     'application_id': app.id,
                     'partner_id': app.partner_id.id if app.partner_id else False,
                     'member_id': member.id if member else False,
                     'transaction_type': 'registration_fee',
                     'date': fields.Date.context_today(tx),
-                    'amount': tx.amount,
+                    'amount': base_amt,
+                    'processing_fee_percentage': tx.saami_processing_fee_percentage or 0.0,
+                    'processing_fee_amount': tx.saami_processing_fee_amount or 0.0,
+                    'total_charged': tx.amount,
                     'currency_id': tx.currency_id.id,
                     'payment_method': tx.provider_code or 'online',
                     'payer_phone': tx.saami_payer_phone or (app.mobile if app else False),

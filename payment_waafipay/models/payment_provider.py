@@ -30,6 +30,21 @@ class PaymentProvider(models.Model):
         string="Test Phone Number",
         help="Phone number in international format (e.g., 25261XXXXXX).",
     )
+    waafipay_processing_fee_percentage = fields.Float(
+        string="Processing Fee (%)",
+        default=0.0,
+        digits=(5, 2),
+        help="Percentage processing fee added to registration fee payments (e.g., 2.0 for 2%).",
+    )
+
+    def _waafipay_compute_fee(self, base_amount):
+        """Return (fee_percentage, fee_amount, total_payable) for a base amount."""
+        self.ensure_one()
+        pct = max(0.0, float(self.waafipay_processing_fee_percentage or 0.0))
+        base = float(base_amount or 0.0)
+        fee_amount = round(base * (pct / 100.0), 2)
+        total_payable = round(base + fee_amount, 2)
+        return pct, fee_amount, total_payable
 
     def _get_default_payment_method_codes(self):
         default_codes = super()._get_default_payment_method_codes()

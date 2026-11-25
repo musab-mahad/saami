@@ -72,6 +72,24 @@ class SaamiContributionTransaction(models.Model):
         required=True,
         tracking=True,
     )
+    processing_fee_percentage = fields.Float(
+        string='Processing Fee (%)',
+        digits=(5, 2),
+        readonly=True,
+        copy=False,
+    )
+    processing_fee_amount = fields.Monetary(
+        string='Processing Fee Amount',
+        currency_field='currency_id',
+        readonly=True,
+        copy=False,
+    )
+    total_charged = fields.Monetary(
+        string='Total Charged',
+        currency_field='currency_id',
+        readonly=True,
+        copy=False,
+    )
     currency_id = fields.Many2one(
         'res.currency',
         string='Currency',

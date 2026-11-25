@@ -29,6 +29,50 @@ def _get_api_base_url():
     return req_url or param_url
 
 
+def _build_registration_summary(app):
+    """Build registration invoice + WaafiPay processing fee summary for an application."""
+    inv = app.invoice_id
+    if inv:
+        amount_total = inv.amount_total
+        amount_due = inv.amount_residual
+        currency = inv.currency_id.name or 'USD'
+        payment_status = inv.payment_state
+        is_paid = inv.payment_state in ('paid', 'in_payment') and inv.amount_residual <= 0
+    else:
+        reg_prod = request.env['saami.product'].sudo().search([
+            ('purpose', '=', 'registration'),
+            ('is_active', '=', True),
+        ], limit=1)
+        amount_total = reg_prod.amount if reg_prod else 0.0
+        amount_due = amount_total
+        currency = (reg_prod.currency_id.name or 'USD') if reg_prod and reg_prod.currency_id else 'USD'
+        payment_status = 'not_paid'
+        is_paid = False
+
+    provider = request.env['payment.provider'].sudo().search([
+        ('code', '=', 'waafipay'),
+        ('state', '!=', 'disabled'),
+    ], limit=1)
+    if provider and not is_paid and amount_due > 0:
+        fee_pct, fee_amt, total_payable = provider._waafipay_compute_fee(amount_due)
+    else:
+        fee_pct = float(provider.waafipay_processing_fee_percentage or 0.0) if provider else 0.0
+        fee_amt = 0.0
+        total_payable = amount_due if not is_paid else 0.0
+
+    return {
+        'invoice_id': inv.id if inv else False,
+        'amount_total': amount_total,
+        'amount_due': amount_due,
+        'processing_fee_percentage': fee_pct,
+        'processing_fee_amount': fee_amt,
+        'total_payable': total_payable,
+        'currency': currency,
+        'payment_status': payment_status,
+        'is_paid': is_paid,
+    }
+
+
 def _build_profile_response(user):
     base_url = _get_api_base_url()
     user_image_url = f"{base_url}/api/saami/user/{user.partner_id.id}/avatar" if user.partner_id.image_1920 else None
@@ -92,6 +136,7 @@ def _build_profile_response(user):
     elif application:
         status = application.state
         inv = application.invoice_id
+        reg_summary = _build_registration_summary(application)
         if application.photo or user.partner_id.image_1920:
             photo_url = f"{base_url}/api/saami/application/{application.id}/photo"
         else:
@@ -134,12 +179,8 @@ def _build_profile_response(user):
             'id_document_number': application.id_document_number,
             'state': application.state,
             'rejection_reason': application.rejection_reason or None,
-            'invoice_id': inv.id if inv else False,
-            'registration_fee': inv.amount_total if inv else 0.0,
-            'amount_due': inv.amount_residual if inv else 0.0,
-            'currency': (inv.currency_id.name or 'USD') if inv else 'USD',
-            'payment_status': inv.payment_state if inv else 'not_paid',
-            'is_paid': inv.payment_state in ('paid', 'in_payment') if inv else False,
+            **reg_summary,
+            'registration_fee': reg_summary['amount_total'],
         }
 
     return {
@@ -380,16 +421,8 @@ class SaamiAuthController(http.Controller):
             'application_number': application_number,
         }
         if application and not member:
-            inv = application.invoice_id
             user_data['rejection_reason'] = application.rejection_reason or None
-            user_data['registration'] = {
-                'invoice_id': inv.id if inv else False,
-                'amount_total': inv.amount_total if inv else 0.0,
-                'amount_due': inv.amount_residual if inv else 0.0,
-                'currency': (inv.currency_id.name or 'USD') if inv else 'USD',
-                'payment_status': inv.payment_state if inv else 'not_paid',
-                'is_paid': inv.payment_state in ('paid', 'in_payment') if inv else False,
-            }
+            user_data['registration'] = _build_registration_summary(application)
 
         return send_json({
             'code': 'SUCCESS',

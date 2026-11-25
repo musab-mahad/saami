@@ -11,6 +11,7 @@
                     <field name="waafipay_merchant_uid" password="True"/>
                     <field name="waafipay_api_user_id" password="True"/>
                     <field name="waafipay_api_key" password="True"/>
+                    <field name="waafipay_processing_fee_percentage"/>
                 </group>
             </xpath>
             <xpath expr="//notebook" position="inside">
