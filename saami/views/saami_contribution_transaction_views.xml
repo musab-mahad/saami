@@ -50,8 +50,12 @@
                         <group string="Payment Details">
                             <field name="date" readonly="state == 'paid'"/>
                             <field name="amount" widget="monetary" readonly="state == 'paid'"/>
+                            <field name="processing_fee_percentage" readonly="1" invisible="not processing_fee_percentage"/>
+                            <field name="processing_fee_amount" widget="monetary" readonly="1" invisible="not processing_fee_amount"/>
+                            <field name="total_charged" widget="monetary" readonly="1" invisible="not total_charged"/>
                             <field name="currency_id" invisible="1"/>
                             <field name="payment_method" readonly="state == 'paid'"/>
+                            <field name="payer_phone" readonly="1" invisible="not payer_phone"/>
                             <field name="external_reference" readonly="state == 'paid'"/>
                         </group>
                     </group>
@@ -99,5 +103,21 @@
         <field name="res_model">saami.contribution.transaction</field>
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_filter_paid': 1}</field>
+    </record>
+
+    <!-- Inherit Payment Transaction Form to show Saami Processing Fee -->
+    <record id="view_payment_transaction_form_saami_fee" model="ir.ui.view">
+        <field name="name">payment.transaction.form.saami.fee</field>
+        <field name="model">payment.transaction</field>
+        <field name="inherit_id" ref="payment.payment_transaction_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='amount']" position="after">
+                <field name="saami_payment_purpose" invisible="1"/>
+                <field name="saami_base_amount" widget="monetary" readonly="1" invisible="not saami_base_amount"/>
+                <field name="saami_processing_fee_percentage" readonly="1" invisible="not saami_processing_fee_percentage"/>
+                <field name="saami_processing_fee_amount" widget="monetary" readonly="1" invisible="not saami_processing_fee_amount"/>
+                <field name="saami_payer_phone" readonly="1" invisible="not saami_payer_phone"/>
+            </xpath>
+        </field>
     </record>
 </odoo>
