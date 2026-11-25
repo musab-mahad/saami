@@ -56,6 +56,7 @@ class SaamiMember(models.Model):
 
     # Next of Kin (1 person)
     kin_name = fields.Char(string='Next of Kin Name')
+    kin_relation = fields.Char(string='Next of Kin Relation')
     kin_mobile = fields.Char(string='Next of Kin Mobile')
     kin_document_type = fields.Char(string='Next of Kin Document Type')
     kin_document_country_id = fields.Many2one('res.country', string='Next of Kin Document Country')

@@ -43,6 +43,7 @@ class SaamiMemberApplication(models.Model):
 
     # Next of Kin (1 person)
     kin_name = fields.Char(string='Next of Kin Name')
+    kin_relation = fields.Char(string='Next of Kin Relation')
     kin_mobile = fields.Char(string='Next of Kin Mobile')
     kin_document_type = fields.Char(string='Next of Kin Document Type')
     kin_document_country_id = fields.Many2one('res.country', string='Next of Kin Document Country')
@@ -171,7 +172,7 @@ class SaamiMemberApplication(models.Model):
             'first_name', 'middle_name', 'last_name', 'mother_name',
             'gender', 'date_of_birth', 'mobile',
             'country_id', 'state_id', 'district_id', 'residence_address',
-            'kin_name', 'kin_mobile', 'kin_document_type',
+            'kin_name', 'kin_relation', 'kin_mobile', 'kin_document_type',
             'kin_document_country_id', 'kin_document_number',
             'photo', 'identity_file',
         ]
@@ -424,6 +425,7 @@ class SaamiMemberApplication(models.Model):
                 'district': rec.district_id.name if rec.district_id else (rec.district or ''),
                 'residence_address': rec.residence_address,
                 'kin_name': rec.kin_name,
+                'kin_relation': rec.kin_relation,
                 'kin_mobile': rec.kin_mobile,
                 'kin_document_type': rec.kin_document_type,
                 'kin_document_country_id': rec.kin_document_country_id.id if rec.kin_document_country_id else False,

@@ -91,6 +91,7 @@
                             <group>
                                 <group string="Next of Kin Details">
                                     <field name="kin_name" readonly="state in ('approved', 'cancelled')"/>
+                                    <field name="kin_relation" readonly="state in ('approved', 'cancelled')"/>
                                     <field name="kin_mobile" readonly="state in ('approved', 'cancelled')"/>
                                 </group>
                                 <group string="Next of Kin Identification">

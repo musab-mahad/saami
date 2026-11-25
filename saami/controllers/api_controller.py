@@ -233,6 +233,7 @@ class SaamiApiController(http.Controller):
                 'residence_address': app.residence_address or None,
                 'next_of_kin': {
                     'name': app.kin_name or None,
+                    'relation': app.kin_relation or None,
                     'mobile': app.kin_mobile or None,
                     'document_type': app.kin_document_type or None,
                     'document_country_id': app.kin_document_country_id.id if app.kin_document_country_id else None,
@@ -334,6 +335,7 @@ class SaamiApiController(http.Controller):
         # Next of kin (1 person)
         kin_map = {
             'kin_name': ('kin_name', 'kin1_name'),
+            'kin_relation': ('kin_relation', 'next_of_kin_relation'),
             'kin_mobile': ('kin_mobile', 'kin1_mobile'),
             'kin_document_type': ('kin_document_type',),
             'kin_document_number': ('kin_document_number',),

@@ -119,6 +119,7 @@ def _build_profile_response(user):
             'residence_address': member.residence_address,
             'next_of_kin': {
                 'name': member.kin_name,
+                'relation': member.kin_relation,
                 'mobile': member.kin_mobile,
                 'document_type': member.kin_document_type,
                 'document_country_id': member.kin_document_country_id.id if member.kin_document_country_id else False,
@@ -167,6 +168,7 @@ def _build_profile_response(user):
             'residence_address': application.residence_address,
             'next_of_kin': {
                 'name': application.kin_name,
+                'relation': application.kin_relation,
                 'mobile': application.kin_mobile,
                 'document_type': application.kin_document_type,
                 'document_country_id': application.kin_document_country_id.id if application.kin_document_country_id else False,
@@ -481,6 +483,8 @@ class SaamiAuthController(http.Controller):
         # 2. Next of Kin (1 person)
         if 'kin_name' in data or 'kin1_name' in data or 'next_of_kin_name' in data:
             member_vals['kin_name'] = (data.get('kin_name') or data.get('kin1_name') or data.get('next_of_kin_name') or '').strip()
+        if 'kin_relation' in data or 'next_of_kin_relation' in data:
+            member_vals['kin_relation'] = (data.get('kin_relation') or data.get('next_of_kin_relation') or '').strip()
         if 'kin_mobile' in data or 'kin1_mobile' in data or 'next_of_kin_phone' in data or 'next_of_kin_mobile' in data:
             member_vals['kin_mobile'] = (data.get('kin_mobile') or data.get('kin1_mobile') or data.get('next_of_kin_phone') or data.get('next_of_kin_mobile') or '').strip()
         if 'kin_document_type' in data:

@@ -84,6 +84,7 @@
                             <group>
                                 <group string="Next of Kin Details">
                                     <field name="kin_name"/>
+                                    <field name="kin_relation"/>
                                     <field name="kin_mobile"/>
                                 </group>
                                 <group string="Next of Kin Identification">
