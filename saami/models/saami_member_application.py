@@ -193,9 +193,9 @@ class SaamiMemberApplication(models.Model):
                 'rejection_reason': False,
             })
             if hasattr(rec, 'with_delay'):
-                rec.sudo().with_delay()._send_payment_received_email()
+                rec.sudo().with_delay()._send_application_received_email()
             else:
-                rec.sudo()._send_payment_received_email()
+                rec.sudo()._send_application_received_email()
 
     def _send_application_received_email(self):
         """Send email acknowledging application submission (async via queue_job)."""
