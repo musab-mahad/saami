@@ -1,6 +1,7 @@
 import logging
 
 from odoo import api, models
+from odoo.http import Stream, request
 
 from . import r2_client
 
@@ -117,3 +118,52 @@ class IrAttachment(models.Model):
                 if local_data:
                     return local_data
         return b''
+
+    def _to_http_stream(self):
+        self.ensure_one()
+        if not r2_client.is_r2_fname(self.store_fname):
+            return super()._to_http_stream()
+
+        cfg = r2_client.get_r2_config(self.env)
+        force_proxy = bool(self.env.context.get('r2_force_proxy'))
+        use_presigned = (
+            not force_proxy
+            and cfg['serve_mode'] == 'presigned'
+            and r2_client.is_r2_configured(cfg)
+        )
+
+        if use_presigned:
+            object_key = r2_client.extract_object_key(self.store_fname)
+            as_attachment = bool(
+                request and str(request.params.get('download', '')).lower() in ('1', 'true')
+            )
+            url = r2_client.r2_generate_download_url(
+                cfg,
+                object_key,
+                filename=self.name,
+                mimetype=self.mimetype,
+                as_attachment=as_attachment,
+            )
+            stream = Stream(
+                type='url',
+                url=url,
+                mimetype=self.mimetype,
+                download_name=self.name,
+                etag=self.checksum,
+                public=self.public,
+            )
+            if not cfg.get('public_url'):
+                stream.max_age = max(cfg['presigned_expiry'] - 10, 0)
+            return stream
+
+        data = self.raw or b''
+        return Stream(
+            type='data',
+            data=data,
+            size=len(data),
+            mimetype=self.mimetype,
+            download_name=self.name,
+            etag=self.checksum,
+            last_modified=self.write_date,
+            public=self.public,
+        )
