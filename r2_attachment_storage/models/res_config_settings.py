@@ -170,3 +170,26 @@ class ResConfigSettings(models.TransientModel):
                 'sticky': False,
             },
         }
+
+    def action_r2_run_gc_now(self):
+        self.ensure_one()
+        self.set_values()
+        cfg = r2_client.get_r2_config(self.env)
+        if not cfg.get('allow_delete'):
+            raise UserError(_('Enable "Allow R2 Object Deletion (GC)" first before running R2 cleanup.'))
+        if not r2_client.is_r2_configured(cfg):
+            raise UserError(_('Configure R2 credentials before running R2 cleanup.'))
+
+        checked, deleted, referenced = self.env['r2.gc.queue'].sudo()._run_gc()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('R2 Cleanup Complete'),
+                'message': _(
+                    'Checked %d queued key(s): deleted %d from R2, %d still referenced in Odoo.'
+                ) % (checked, deleted, referenced),
+                'type': 'success',
+                'sticky': False,
+            },
+        }

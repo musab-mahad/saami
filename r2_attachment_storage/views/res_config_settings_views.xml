@@ -80,6 +80,13 @@
                         <setting id="r2_allow_delete_setting"
                                  help="Enable only on primary production. Keep OFF on staging/restored clones so they cannot delete live R2 files.">
                             <field name="r2_allow_delete"/>
+                            <div class="mt8" invisible="not r2_allow_delete">
+                                <button name="action_r2_run_gc_now"
+                                        type="object"
+                                        string="Run R2 Cleanup Now"
+                                        class="btn-secondary"
+                                        icon="fa-trash"/>
+                            </div>
                         </setting>
                         <setting id="r2_migration_setting"
                                  help="Migrate existing media and document attachments between local filestore and Cloudflare R2.">

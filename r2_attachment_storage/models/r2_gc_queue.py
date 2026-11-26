@@ -20,14 +20,14 @@ class R2GcQueue(models.Model):
         self.sudo().create({'store_fname': fname})
 
     @api.model
-    def _cron_gc_r2_objects(self, batch_size=200):
+    def _run_gc(self, batch_size=200):
         cfg = r2_client.get_r2_config(self.env)
         if not cfg.get('allow_delete') or not r2_client.is_r2_configured(cfg):
-            return 0
+            return 0, 0, 0
 
         queued = self.sudo().search([], limit=batch_size)
         if not queued:
-            return 0
+            return 0, 0, 0
 
         fnames = list({rec.store_fname for rec in queued if rec.store_fname})
         whitelist = set()
@@ -40,8 +40,10 @@ class R2GcQueue(models.Model):
                 whitelist.update(row[0] for row in self.env.cr.fetchall())
 
         deleted_count = 0
+        referenced_count = 0
         for fname in fnames:
             if fname in whitelist:
+                referenced_count += 1
                 continue
             try:
                 object_key = r2_client.extract_object_key(fname)
@@ -49,9 +51,16 @@ class R2GcQueue(models.Model):
                 deleted_count += 1
             except Exception:
                 _logger.warning("Failed to delete R2 object %s during GC", fname, exc_info=True)
-                # Keep failed items in queue for retry
                 queued = queued.filtered(lambda r, fn=fname: r.store_fname != fn)
 
         queued.unlink()
-        _logger.info("R2 GC processed %d unique keys, deleted %d objects", len(fnames), deleted_count)
+        _logger.info(
+            "R2 GC processed %d unique keys, deleted %d objects, %d still referenced",
+            len(fnames), deleted_count, referenced_count,
+        )
+        return len(fnames), deleted_count, referenced_count
+
+    @api.model
+    def _cron_gc_r2_objects(self, batch_size=200):
+        _checked, deleted_count, _referenced = self._run_gc(batch_size=batch_size)
         return deleted_count
