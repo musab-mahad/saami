@@ -4,7 +4,7 @@ from odoo import http, fields, _
 from odoo.http import request
 
 from .jwt_utils import send_json, handle_cors, get_json_body, get_request_payload, parse_base64_file, require_jwt
-from .auth_controller import _get_api_base_url, _build_registration_summary
+from .auth_controller import _get_api_base_url, _build_registration_summary, _resolve_media_url, _resolve_photo_url
 
 _logger = logging.getLogger(__name__)
 
@@ -204,8 +204,17 @@ class SaamiApiController(http.Controller):
     def _serialize_kyc(self, app):
         base_url = _get_api_base_url()
         inv = app.invoice_id
-        photo_url = f"{base_url}/api/saami/application/{app.id}/photo" if (app.photo or app.partner_id.image_1920) else None
-        identity_url = f"{base_url}/api/saami/application/{app.id}/identity" if app.identity_file else None
+        photo_url = _resolve_photo_url(
+            app,
+            app.partner_id,
+            f"{base_url}/api/saami/application/{app.id}/photo",
+        )
+        identity_url = _resolve_media_url(
+            app,
+            'identity_file',
+            f"{base_url}/api/saami/application/{app.id}/identity",
+            filename=app.identity_filename,
+        )
         return {
             'code': 'SUCCESS',
             'status': app.state,

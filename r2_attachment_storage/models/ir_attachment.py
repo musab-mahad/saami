@@ -1,7 +1,7 @@
 import logging
 
-from odoo import api, models
-from odoo.http import Stream
+from odoo import api, fields, models
+from odoo.http import Stream, request
 
 from . import r2_client
 
@@ -16,10 +16,57 @@ EXCLUDED_MIMETYPES = (
     'application/javascript',
     'application/x-javascript',
 )
+DEFAULT_R2_URL_EXPIRY = 86400  # 24 hours
 
 
 class IrAttachment(models.Model):
     _inherit = 'ir.attachment'
+
+    r2_direct_url = fields.Char(
+        string='Cloudflare R2 URL',
+        compute='_compute_r2_direct_url',
+    )
+
+    @api.depends('store_fname', 'name', 'mimetype')
+    def _compute_r2_direct_url(self):
+        for attach in self:
+            attach.r2_direct_url = attach.get_r2_direct_url() or False
+
+    def get_r2_direct_url(self, expires_in=DEFAULT_R2_URL_EXPIRY, filename=None, as_attachment=False):
+        """Return a signed Cloudflare R2 URL for this attachment if stored in R2, else None."""
+        self.ensure_one()
+        if not r2_client.is_r2_fname(self.store_fname):
+            return None
+        cfg = r2_client.get_r2_config(self.env)
+        if not r2_client.is_r2_configured(cfg):
+            return None
+        object_key = r2_client.extract_object_key(self.store_fname)
+        return r2_client.r2_generate_presigned_url(
+            cfg,
+            object_key,
+            filename=filename or self.name,
+            mimetype=self.mimetype,
+            as_attachment=as_attachment,
+            expires_in=expires_in,
+        )
+
+    @api.model
+    def get_field_r2_url(self, record, field_name, expires_in=DEFAULT_R2_URL_EXPIRY, filename=None, as_attachment=False):
+        """Return a signed Cloudflare R2 URL for a Binary/Image field's attachment without reading bytes."""
+        if not record or not record.id:
+            return None
+        attachment = self.sudo().search([
+            ('res_model', '=', record._name),
+            ('res_id', '=', record.id),
+            ('res_field', '=', field_name),
+        ], limit=1)
+        if not attachment:
+            return None
+        return attachment.get_r2_direct_url(
+            expires_in=expires_in,
+            filename=filename,
+            as_attachment=as_attachment,
+        )
 
     @api.model
     def _is_r2_active(self):
@@ -54,7 +101,6 @@ class IrAttachment(models.Model):
     def _get_storage_domain(self):
         storage = self._storage()
         if storage == 'r2':
-            # Migrate DB attachments and non-asset local filestore attachments to R2
             return [
                 '!', ('url', '=like', '/web/assets/%'),
                 ('mimetype', 'not in', list(EXCLUDED_MIMETYPES)),
@@ -135,10 +181,42 @@ class IrAttachment(models.Model):
                     return local_data
         return b''
 
+    @api.model
+    def _is_xhr_or_non_get_request(self):
+        if not request or not getattr(request, 'httprequest', None):
+            return False
+        http_req = request.httprequest
+        if http_req.method != 'GET':
+            return True
+        if http_req.headers.get('Sec-Fetch-Mode') == 'cors':
+            return True
+        if http_req.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return True
+        return False
+
     def _to_http_stream(self):
         self.ensure_one()
         if not r2_client.is_r2_fname(self.store_fname):
             return super()._to_http_stream()
+
+        # Proxy XHR/POST backend downloads and resized images through Odoo to avoid CORS;
+        # redirect direct GET requests straight to Cloudflare R2.
+        force_proxy = bool(self.env.context.get('r2_force_proxy')) or self._is_xhr_or_non_get_request()
+        if not force_proxy:
+            as_attachment = bool(
+                request and str(request.params.get('download', '')).lower() in ('1', 'true')
+            )
+            direct_url = self.get_r2_direct_url(as_attachment=as_attachment)
+            if direct_url:
+                return Stream(
+                    type='url',
+                    url=direct_url,
+                    mimetype=self.mimetype,
+                    download_name=self.name,
+                    etag=self.checksum,
+                    public=self.public,
+                    max_age=max(DEFAULT_R2_URL_EXPIRY - 60, 0),
+                )
 
         data = self.raw or b''
         return Stream(
@@ -154,7 +232,6 @@ class IrAttachment(models.Model):
 
     @api.autovacuum
     def _gc_file_store(self):
-        # Ensure local disk checklist cleanup still runs for migrated files and local web assets
         return super(IrAttachment, self.with_context(r2_skip=True))._gc_file_store()
 
     @api.model

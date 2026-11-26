@@ -159,6 +159,27 @@ def r2_delete_object(cfg, object_key):
             raise
 
 
+def r2_generate_presigned_url(cfg, object_key, filename=None, mimetype=None, as_attachment=False, expires_in=86400):
+    """Generate a locally signed Cloudflare R2 download URL (no network round-trip)."""
+    client = get_s3_client(cfg)
+    params = {
+        'Bucket': cfg['bucket_name'],
+        'Key': object_key,
+    }
+    if mimetype:
+        params['ResponseContentType'] = mimetype
+    if filename:
+        disposition = 'attachment' if as_attachment else 'inline'
+        safe_name = str(filename).replace('"', '_').replace('\n', '_').replace('\r', '_')
+        params['ResponseContentDisposition'] = f'{disposition}; filename="{safe_name}"'
+
+    return client.generate_presigned_url(
+        'get_object',
+        Params=params,
+        ExpiresIn=expires_in,
+    )
+
+
 def r2_test_connection(cfg):
     """Verify R2 bucket access and read/write/delete permissions."""
     client = get_s3_client(cfg)

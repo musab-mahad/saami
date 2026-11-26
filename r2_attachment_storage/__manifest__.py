@@ -12,6 +12,7 @@
     'data': [
         'security/ir.model.access.csv',
         'data/ir_cron_data.xml',
+        'views/ir_attachment_views.xml',
         'views/res_config_settings_views.xml',
     ],
     'installable': True,

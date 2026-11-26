@@ -73,9 +73,33 @@ def _build_registration_summary(app):
     }
 
 
+def _resolve_media_url(record, field_name, fallback_url, filename=None):
+    """Return direct Cloudflare R2 URL if stored in R2, else fallback_url when binary field is non-empty."""
+    if not record or not record.id:
+        return None
+    Attachment = request.env['ir.attachment'].sudo()
+    if hasattr(Attachment, 'get_field_r2_url'):
+        r2_url = Attachment.get_field_r2_url(record, field_name, filename=filename)
+        if r2_url:
+            return r2_url
+    has_val = bool(record.sudo().with_context(bin_size=True)[field_name])
+    return fallback_url if has_val else None
+
+
+def _resolve_photo_url(record, partner, fallback_url):
+    url = _resolve_media_url(record, 'photo', fallback_url)
+    if url:
+        return url
+    return _resolve_media_url(partner, 'image_1920', fallback_url)
+
+
 def _build_profile_response(user):
     base_url = _get_api_base_url()
-    user_image_url = f"{base_url}/api/saami/user/{user.partner_id.id}/avatar" if user.partner_id.image_1920 else None
+    user_image_url = _resolve_media_url(
+        user.partner_id,
+        'image_1920',
+        f"{base_url}/api/saami/user/{user.partner_id.id}/avatar",
+    )
 
     Application = request.env['saami.member.application'].sudo()
     Member = request.env['saami.member'].sudo()
@@ -88,10 +112,17 @@ def _build_profile_response(user):
 
     if member:
         status = member.state
-        if member.photo or member.partner_id.image_1920:
-            photo_url = f"{base_url}/api/saami/member/{member.id}/photo"
-        else:
-            photo_url = None
+        photo_url = _resolve_photo_url(
+            member,
+            member.partner_id,
+            f"{base_url}/api/saami/member/{member.id}/photo",
+        )
+        identity_url = _resolve_media_url(
+            member,
+            'identity_file',
+            f"{base_url}/api/saami/member/{member.id}/identity",
+            filename=member.identity_filename,
+        )
 
         details = {
             'type': 'member',
@@ -109,7 +140,7 @@ def _build_profile_response(user):
             'mother_name': member.mother_name,
             'education_level': member.education_level,
             'image_url': photo_url,
-            'identity_url': f"{base_url}/api/saami/member/{member.id}/identity" if member.identity_file else None,
+            'identity_url': identity_url,
             'district_id': member.district_id.id if member.district_id else False,
             'district': member.district_id.name if member.district_id else (member.district or False),
             'region_id': member.state_id.id if member.state_id else False,
@@ -138,10 +169,17 @@ def _build_profile_response(user):
         status = application.state
         inv = application.invoice_id
         reg_summary = _build_registration_summary(application)
-        if application.photo or user.partner_id.image_1920:
-            photo_url = f"{base_url}/api/saami/application/{application.id}/photo"
-        else:
-            photo_url = None
+        photo_url = _resolve_photo_url(
+            application,
+            user.partner_id,
+            f"{base_url}/api/saami/application/{application.id}/photo",
+        )
+        identity_url = _resolve_media_url(
+            application,
+            'identity_file',
+            f"{base_url}/api/saami/application/{application.id}/identity",
+            filename=application.identity_filename,
+        )
 
         details = {
             'type': 'application',
@@ -158,7 +196,7 @@ def _build_profile_response(user):
             'mother_name': application.mother_name,
             'education_level': application.education_level,
             'image_url': photo_url,
-            'identity_url': f"{base_url}/api/saami/application/{application.id}/identity" if application.identity_file else None,
+            'identity_url': identity_url,
             'district_id': application.district_id.id if application.district_id else False,
             'district': application.district_id.name if application.district_id else (application.district or False),
             'region_id': application.state_id.id if application.state_id else False,
@@ -411,7 +449,11 @@ class SaamiAuthController(http.Controller):
         token = generate_jwt(user, extra_payload=extra_payload)
 
         base_url = _get_api_base_url()
-        user_image_url = f"{base_url}/api/saami/user/{user.partner_id.id}/avatar" if user.partner_id.image_1920 else None
+        user_image_url = _resolve_media_url(
+            user.partner_id,
+            'image_1920',
+            f"{base_url}/api/saami/user/{user.partner_id.id}/avatar",
+        )
 
         user_data = {
             'id': user.id,

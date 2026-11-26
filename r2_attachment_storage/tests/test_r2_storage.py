@@ -111,10 +111,11 @@ class TestR2AttachmentStorage(TransactionCase):
                 'mimetype': 'image/png',
             })
 
-            # Stream proxies bytes through Odoo cleanly and supports image resizing
+            # Direct stream returns signed Cloudflare R2 URL; resized image proxies via Odoo
             full_stream = att._to_http_stream()
-            self.assertEqual(full_stream.type, 'data')
-            self.assertEqual(full_stream.data, png)
+            self.assertEqual(full_stream.type, 'url')
+            self.assertIn('fake-r2.example.com/saami-bucket/media/', full_stream.url)
+            self.assertIn('fake-r2.example.com/saami-bucket/media/', att.r2_direct_url)
 
             resized_stream = self.env['ir.binary']._get_image_stream_from(att, width=50, height=50)
             self.assertEqual(resized_stream.type, 'data')
