@@ -167,3 +167,12 @@ class IrAttachment(models.Model):
             last_modified=self.write_date,
             public=self.public,
         )
+
+    @api.model
+    def _file_delete(self, fname):
+        if not r2_client.is_r2_fname(fname):
+            return super()._file_delete(fname)
+
+        cfg = r2_client.get_r2_config(self.env)
+        if cfg.get('allow_delete'):
+            self.env['r2.gc.queue'].enqueue(fname)
