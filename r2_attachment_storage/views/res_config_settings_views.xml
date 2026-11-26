@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_r2" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.r2.storage</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="75"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Cloudflare R2" string="Cloudflare R2" name="r2_attachment_storage">
+                    <block title="Cloudflare R2 Storage" name="r2_storage_general">
+                        <setting id="r2_enabled_setting"
+                                 help="Store media, images, and document attachments in Cloudflare R2 (JS/CSS web assets stay local).">
+                            <field name="r2_enabled"/>
+                        </setting>
+                        <setting id="r2_serve_mode_setting"
+                                 invisible="not r2_enabled"
+                                 help="Presigned URL redirects offload downloads directly to R2 while still resizing images in Odoo.">
+                            <field name="r2_serve_mode"/>
+                            <div class="content-group mt16" invisible="r2_serve_mode != 'presigned'">
+                                <div class="row">
+                                    <label for="r2_presigned_expiry" class="col-lg-4 o_light_label"/>
+                                    <field name="r2_presigned_expiry" class="col-lg-3"/>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+
+                    <block title="R2 Connection Credentials" name="r2_storage_credentials">
+                        <setting id="r2_account_setting" help="Cloudflare Account ID and R2 Bucket Name.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label for="r2_account_id" class="col-lg-4 o_light_label"/>
+                                    <field name="r2_account_id" placeholder="e.g. a1b2c3d4e5f6..."/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="r2_bucket_name" class="col-lg-4 o_light_label"/>
+                                    <field name="r2_bucket_name" placeholder="e.g. my-odoo-media"/>
+                                </div>
+                            </div>
+                        </setting>
+                        <setting id="r2_keys_setting" help="S3-compatible R2 API token credentials.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label for="r2_access_key_id" class="col-lg-4 o_light_label"/>
+                                    <field name="r2_access_key_id"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="r2_secret_access_key" class="col-lg-4 o_light_label"/>
+                                    <field name="r2_secret_access_key" password="True"/>
+                                </div>
+                            </div>
+                        </setting>
+                        <setting id="r2_prefix_setting" help="Optional folder prefix and custom public domain.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label for="r2_key_prefix" class="col-lg-4 o_light_label"/>
+                                    <field name="r2_key_prefix" placeholder="e.g. saami (optional)"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="r2_public_url" class="col-lg-4 o_light_label"/>
+                                    <field name="r2_public_url" placeholder="https://cdn.example.com (optional)"/>
+                                </div>
+                                <div class="mt16">
+                                    <button name="action_r2_test_connection"
+                                            type="object"
+                                            string="Test R2 Connection"
+                                            class="btn-secondary"
+                                            icon="fa-plug"/>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+
+                    <block title="Safety &amp; Transition" name="r2_storage_safety">
+                        <setting id="r2_fallback_local_setting"
+                                 help="Read from local filestore if an attachment key is not found in R2 yet.">
+                            <field name="r2_fallback_local"/>
+                        </setting>
+                        <setting id="r2_allow_delete_setting"
+                                 help="Enable only on primary production. Keep OFF on staging/restored clones so they cannot delete live R2 files.">
+                            <field name="r2_allow_delete"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

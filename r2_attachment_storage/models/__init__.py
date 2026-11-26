@@ -1,1 +1,1 @@
-# Models will be imported here as each step is implemented.
+from . import res_config_settings
