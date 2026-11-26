@@ -7,7 +7,10 @@
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app data-string="Cloudflare R2" string="Cloudflare R2" name="r2_attachment_storage">
+                <app data-string="Cloudflare R2"
+                     string="Cloudflare R2"
+                     name="r2_attachment_storage"
+                     logo="/r2_attachment_storage/static/description/icon.png">
                     <block title="Cloudflare R2 Storage" name="r2_storage_general">
                         <setting id="r2_enabled_setting"
                                  help="Store media, images, and document attachments in Cloudflare R2 (JS/CSS web assets stay local).">
