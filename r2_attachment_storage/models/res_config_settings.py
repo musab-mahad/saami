@@ -108,3 +108,56 @@ class ResConfigSettings(models.TransientModel):
                 'sticky': False,
             },
         }
+
+    def action_r2_migrate_to_r2(self):
+        self.ensure_one()
+        self.set_values()
+        cfg = r2_client.get_r2_config(self.env)
+        if not (cfg['enabled'] and r2_client.is_r2_configured(cfg)):
+            raise UserError(_('Enable Cloudflare R2 Storage and configure credentials before migrating.'))
+
+        Attachment = self.env['ir.attachment'].sudo()
+        domain = [
+            ('type', '=', 'binary'),
+            '!', ('url', '=like', '/web/assets/%'),
+            '|', ('res_field', '=', False), ('res_field', '!=', False),
+            '|', ('db_datas', '!=', False),
+            '&', ('store_fname', '!=', False), ('store_fname', 'not like', 'r2/%'),
+        ]
+        attachments = Attachment.search(domain)
+        if attachments:
+            attachments._migrate()
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Migration Complete'),
+                'message': _('Migrated %d attachment(s) to Cloudflare R2.') % len(attachments),
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
+    def action_r2_migrate_to_local(self):
+        self.ensure_one()
+        Attachment = self.env['ir.attachment'].sudo()
+        domain = [
+            ('type', '=', 'binary'),
+            ('store_fname', '=like', 'r2/%'),
+            '|', ('res_field', '=', False), ('res_field', '!=', False),
+        ]
+        attachments = Attachment.search(domain)
+        if attachments:
+            attachments.with_context(r2_skip=True)._migrate()
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Migration Complete'),
+                'message': _('Migrated %d attachment(s) back to local filestore.') % len(attachments),
+                'type': 'success',
+                'sticky': False,
+            },
+        }

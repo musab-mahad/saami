@@ -81,6 +81,23 @@
                                  help="Enable only on primary production. Keep OFF on staging/restored clones so they cannot delete live R2 files.">
                             <field name="r2_allow_delete"/>
                         </setting>
+                        <setting id="r2_migration_setting"
+                                 help="Migrate existing media and document attachments between local filestore and Cloudflare R2.">
+                            <div class="content-group">
+                                <div class="mt8">
+                                    <button name="action_r2_migrate_to_r2"
+                                            type="object"
+                                            string="Migrate Local Media to R2"
+                                            class="btn-primary me-2"
+                                            icon="fa-cloud-upload"/>
+                                    <button name="action_r2_migrate_to_local"
+                                            type="object"
+                                            string="Migrate R2 Media to Local"
+                                            class="btn-secondary"
+                                            icon="fa-cloud-download"/>
+                                </div>
+                            </div>
+                        </setting>
                     </block>
                 </app>
             </xpath>
