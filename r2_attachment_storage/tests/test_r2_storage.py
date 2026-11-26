@@ -88,7 +88,7 @@ class TestR2AttachmentStorage(TransactionCase):
             self.assertEqual(len(self.fake_s3.objects), 1)
             self.assertEqual(att1.raw, payload)
 
-            # Web asset bundles must remain in local filestore
+            # Web asset bundles and CSS/SCSS/JS mimetypes must remain in local filestore
             asset = Attachment.create({
                 'name': 'bundle.js',
                 'url': '/web/assets/1/bundle.js',
@@ -96,6 +96,13 @@ class TestR2AttachmentStorage(TransactionCase):
                 'mimetype': 'application/javascript',
             })
             self.assertFalse(asset.store_fname.startswith('r2/'))
+
+            scss = Attachment.create({
+                'name': 'custom.scss',
+                'raw': b'$primary: #000;',
+                'mimetype': 'text/scss',
+            })
+            self.assertFalse(scss.store_fname.startswith('r2/'))
 
     def test_02_stream_presigned_and_resized_image(self):
         with patch('odoo.addons.r2_attachment_storage.models.r2_client.get_s3_client', return_value=self.fake_s3):

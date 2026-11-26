@@ -120,6 +120,15 @@ class ResConfigSettings(models.TransientModel):
         domain = [
             ('type', '=', 'binary'),
             '!', ('url', '=like', '/web/assets/%'),
+            ('mimetype', 'not in', [
+                'text/css',
+                'text/scss',
+                'text/x-scss',
+                'text/less',
+                'text/javascript',
+                'application/javascript',
+                'application/x-javascript',
+            ]),
             '|', ('res_field', '=', False), ('res_field', '!=', False),
             '|', ('db_datas', '!=', False),
             '&', ('store_fname', '!=', False), ('store_fname', 'not like', 'r2/%'),

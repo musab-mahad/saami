@@ -7,6 +7,15 @@ from . import r2_client
 
 _logger = logging.getLogger(__name__)
 EXCLUDED_URL_PREFIXES = ('/web/assets/',)
+EXCLUDED_MIMETYPES = (
+    'text/css',
+    'text/scss',
+    'text/x-scss',
+    'text/less',
+    'text/javascript',
+    'application/javascript',
+    'application/x-javascript',
+)
 
 
 class IrAttachment(models.Model):
@@ -22,12 +31,18 @@ class IrAttachment(models.Model):
     @api.model
     def _is_r2_excluded_values(self, values):
         url = values.get('url') or ''
-        return any(url.startswith(prefix) for prefix in EXCLUDED_URL_PREFIXES)
+        mimetype = (values.get('mimetype') or '').split(';')[0].strip().lower()
+        return any(url.startswith(prefix) for prefix in EXCLUDED_URL_PREFIXES) or mimetype in EXCLUDED_MIMETYPES
 
     def _is_r2_excluded_record(self, vals=None):
         self.ensure_one()
         url = (vals or {}).get('url') if vals and 'url' in vals else self.url
-        return bool(url and any(url.startswith(prefix) for prefix in EXCLUDED_URL_PREFIXES))
+        mimetype = ((vals or {}).get('mimetype') if vals and 'mimetype' in vals else self.mimetype) or ''
+        mimetype = mimetype.split(';')[0].strip().lower()
+        return bool(
+            (url and any(url.startswith(prefix) for prefix in EXCLUDED_URL_PREFIXES))
+            or mimetype in EXCLUDED_MIMETYPES
+        )
 
     @api.model
     def _storage(self):
@@ -42,6 +57,7 @@ class IrAttachment(models.Model):
             # Migrate DB attachments and non-asset local filestore attachments to R2
             return [
                 '!', ('url', '=like', '/web/assets/%'),
+                ('mimetype', 'not in', list(EXCLUDED_MIMETYPES)),
                 '|',
                 ('db_datas', '!=', False),
                 '&', ('store_fname', '!=', False), ('store_fname', 'not like', 'r2/%'),
