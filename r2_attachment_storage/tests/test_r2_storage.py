@@ -66,8 +66,6 @@ class TestR2AttachmentStorage(TransactionCase):
         params.set_param('r2_storage.secret_access_key', 'sec123')
         params.set_param('r2_storage.bucket_name', 'saami-bucket')
         params.set_param('r2_storage.key_prefix', 'media')
-        params.set_param('r2_storage.serve_mode', 'presigned')
-        params.set_param('r2_storage.presigned_expiry', '300')
         params.set_param('r2_storage.fallback_local', 'True')
         params.set_param('r2_storage.allow_delete', 'False')
 

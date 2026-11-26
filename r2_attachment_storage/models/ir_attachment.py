@@ -1,7 +1,7 @@
 import logging
 
 from odoo import api, models
-from odoo.http import Stream, request
+from odoo.http import Stream
 
 from . import r2_client
 

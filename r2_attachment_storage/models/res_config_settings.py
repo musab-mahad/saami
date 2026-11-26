@@ -34,40 +34,33 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='r2_storage.key_prefix',
         help='Optional folder prefix inside the bucket (do not use DB name if you want DB restores to keep working).',
     )
-    r2_public_url = fields.Char(
-        string='Public / Custom Domain URL',
-        config_parameter='r2_storage.public_url',
-        help='Optional custom public domain (e.g. https://cdn.example.com). Leave blank to use private presigned URLs.',
-    )
-    r2_serve_mode = fields.Selection(
-        selection=[
-            ('proxy', 'Proxy All Requests Through Odoo'),
-            ('presigned', 'Presigned / Public URL Redirect'),
-        ],
-        string='Serving Mode',
-        default='proxy',
-        config_parameter='r2_storage.serve_mode',
-    )
-    r2_presigned_expiry = fields.Integer(
-        string='Presigned URL Expiry (Seconds)',
-        default=300,
-        config_parameter='r2_storage.presigned_expiry',
-    )
     r2_fallback_local = fields.Boolean(
         string='Fallback to Local Filestore on Read',
         default=True,
-        config_parameter='r2_storage.fallback_local',
         help='If an attachment is not found in R2, attempt to read it from the local filestore.',
     )
     r2_allow_delete = fields.Boolean(
         string='Allow R2 Object Deletion (GC)',
         default=True,
-        config_parameter='r2_storage.allow_delete',
-        help='Uncheck on staging/cloned databases so they cannot delete live production objects in R2.',
+        help='Checked by default for production. Uncheck on staging/cloned databases so they cannot delete live R2 files.',
     )
+
+    @api.model
+    def get_values(self):
+        res = super().get_values()
+        cfg = r2_client.get_r2_config(self.env)
+        res.update({
+            'r2_fallback_local': cfg['fallback_local'],
+            'r2_allow_delete': cfg['allow_delete'],
+        })
+        return res
 
     def set_values(self):
         super().set_values()
+        params = self.env['ir.config_parameter'].sudo()
+        params.set_param('r2_storage.fallback_local', 'True' if self.r2_fallback_local else 'False')
+        params.set_param('r2_storage.allow_delete', 'True' if self.r2_allow_delete else 'False')
+
         if self.r2_enabled:
             cfg = r2_client.get_r2_config(self.env)
             if not r2_client.is_r2_configured(cfg):
@@ -87,7 +80,6 @@ class ResConfigSettings(models.TransientModel):
             'secret_access_key': (self.r2_secret_access_key or saved['secret_access_key'] or '').strip(),
             'bucket_name': (self.r2_bucket_name or saved['bucket_name'] or '').strip(),
             'key_prefix': (self.r2_key_prefix or saved['key_prefix'] or '').strip().strip('/'),
-            'public_url': (self.r2_public_url or saved['public_url'] or '').strip().rstrip('/'),
         }
 
     def action_r2_test_connection(self):

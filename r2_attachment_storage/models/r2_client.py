@@ -1,7 +1,6 @@
 import logging
 import threading
 import uuid
-from urllib.parse import quote
 
 from odoo import _
 from odoo.exceptions import UserError
@@ -23,27 +22,17 @@ _CLIENT_LOCK = threading.Lock()
 
 
 def _as_bool(value, default=False):
-    if value is None or value == '':
+    if value is None or value is False or value == '':
         return default
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
-def _as_int(value, default=300):
-    try:
-        parsed = int(value)
-        return parsed if parsed > 0 else default
-    except (TypeError, ValueError):
-        return default
-
-
 def get_r2_config(env):
     """Read Cloudflare R2 configuration from ir.config_parameter."""
     params = env['ir.config_parameter'].sudo()
     prefix = (params.get_param('r2_storage.key_prefix') or '').strip().strip('/')
-    public_url = (params.get_param('r2_storage.public_url') or '').strip().rstrip('/')
-    serve_mode = 'proxy'
 
     return {
         'enabled': _as_bool(params.get_param('r2_storage.enabled'), default=False),
@@ -52,9 +41,6 @@ def get_r2_config(env):
         'secret_access_key': (params.get_param('r2_storage.secret_access_key') or '').strip(),
         'bucket_name': (params.get_param('r2_storage.bucket_name') or '').strip(),
         'key_prefix': prefix,
-        'public_url': public_url,
-        'serve_mode': serve_mode,
-        'presigned_expiry': _as_int(params.get_param('r2_storage.presigned_expiry'), default=300),
         'fallback_local': _as_bool(params.get_param('r2_storage.fallback_local'), default=True),
         'allow_delete': _as_bool(params.get_param('r2_storage.allow_delete'), default=True),
     }
@@ -171,31 +157,6 @@ def r2_delete_object(cfg, object_key):
     except ClientError as exc:
         if not _is_not_found_error(exc):
             raise
-
-
-def r2_generate_download_url(cfg, object_key, filename=None, mimetype=None, as_attachment=False):
-    """Return a public or presigned R2 download URL."""
-    if cfg.get('public_url'):
-        encoded_key = '/'.join(quote(part, safe='') for part in object_key.split('/'))
-        return f"{cfg['public_url']}/{encoded_key}"
-
-    client = get_s3_client(cfg)
-    params = {
-        'Bucket': cfg['bucket_name'],
-        'Key': object_key,
-    }
-    if mimetype:
-        params['ResponseContentType'] = mimetype
-    if filename:
-        disposition = 'attachment' if as_attachment else 'inline'
-        safe_name = filename.replace('"', '_')
-        params['ResponseContentDisposition'] = f'{disposition}; filename="{safe_name}"'
-
-    return client.generate_presigned_url(
-        'get_object',
-        Params=params,
-        ExpiresIn=cfg['presigned_expiry'],
-    )
 
 
 def r2_test_connection(cfg):
