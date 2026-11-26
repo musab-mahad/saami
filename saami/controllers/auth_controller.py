@@ -344,17 +344,24 @@ class SaamiAuthController(http.Controller):
 
             token_email = (token_res.get('email') or login).strip().lower()
             token_name = (token_res.get('name') or token_email.split('@')[0]).strip()
-            user = request.env['res.users'].sudo().search([('login', '=ilike', token_email)], limit=1)
+            given_name = (token_res.get('given_name') or '').strip()
+            family_name = (token_res.get('family_name') or '').strip()
+
+            sudo_env = request.env(su=True)
+            bot = sudo_env.ref('saami.user_saami_bot', raise_if_not_found=False) or sudo_env.ref('base.user_root')
+            company = bot.company_id or sudo_env['res.company'].search([], limit=1)
+            bot_env = request.env(user=bot.id, su=True, context={**request.env.context, 'allowed_company_ids': [company.id]})
+
+            user = bot_env['res.users'].search([('login', '=ilike', token_email)], limit=1)
 
             if not user:
-                company = request.env['res.company'].sudo().search([], limit=1)
-                portal_group = request.env.ref('base.group_portal')
-                partner = request.env['res.partner'].sudo().create({
+                portal_group = bot_env.ref('base.group_portal')
+                partner = bot_env['res.partner'].create({
                     'name': token_name,
                     'email': token_email,
                     'company_id': company.id,
                 })
-                user = request.env['res.users'].sudo().with_context(
+                user = bot_env['res.users'].with_context(
                     no_reset_password=True,
                     mail_create_nosubscribe=True,
                     mail_create_nolog=True,
@@ -369,20 +376,30 @@ class SaamiAuthController(http.Controller):
                     'groups_id': [(6, 0, [portal_group.id])],
                     'saami_email_verified': True,
                 })
-                request.env['saami.member.application'].sudo().create({
-                    'partner_id': partner.id,
-                    'user_id': user.id,
-                    'full_name': token_name,
-                    'email': token_email,
-                    'state': 'draft',
-                })
+                existing_app = bot_env['saami.member.application'].search([
+                    '|', ('partner_id', '=', partner.id), ('email', '=ilike', token_email),
+                    ('state', '!=', 'cancelled'),
+                ], limit=1)
+                if not existing_app:
+                    app_vals = {
+                        'partner_id': partner.id,
+                        'user_id': user.id,
+                        'full_name': token_name,
+                        'email': token_email,
+                        'state': 'draft',
+                    }
+                    if given_name:
+                        app_vals['first_name'] = given_name
+                    if family_name:
+                        app_vals['last_name'] = family_name
+                    bot_env['saami.member.application'].create(app_vals)
             elif not user.active:
                 return send_json({
                     'code': 'ACCOUNT_INACTIVE',
                     'message': 'Your account is deactivated. Please contact support.',
                 }, status=403)
             elif not user.saami_email_verified:
-                user.sudo().write({'saami_email_verified': True})
+                user.write({'saami_email_verified': True})
 
             uid = user.id
         else:
