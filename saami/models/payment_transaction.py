@@ -107,6 +107,11 @@ class PaymentTransaction(models.Model):
         )
         payment_register = self.env['account.payment.register'].sudo().with_context(**ctx).create(register_vals)
         payments = payment_register._create_payments()
+        if payments:
+            self.sudo().write({
+                'payment_id': payments[0].id,
+                'is_post_processed': True,
+            })
         invoice.invalidate_recordset(['payment_state', 'amount_residual'])
         _logger.info(
             "Payment registered for invoice %s: payments=%s, payment_state=%s, amount_residual=%s",
@@ -171,6 +176,7 @@ class PaymentTransaction(models.Model):
                     else:
                         app.sudo()._send_partial_payment_received_email()
                 tx.saami_fulfilled = True
+                tx.is_post_processed = True
 
             # Case 2: Monthly Capital Contribution
             elif tx.saami_tracker_id:
@@ -236,9 +242,19 @@ class PaymentTransaction(models.Model):
                 tracker._compute_actual_amount()
                 tracker._compute_state()
                 tx.saami_fulfilled = True
+                tx.is_post_processed = True
 
                 # Send contribution receipt email (async via queue_job)
                 if hasattr(tx_record, 'with_delay'):
                     tx_record.with_delay()._send_contribution_paid_email()
                 else:
                     tx_record._send_contribution_paid_email()
+
+    def _post_process(self):
+        """Prevent Odoo's post-process cron from creating a duplicate account.payment for fulfilled Saami txs."""
+        already_fulfilled = self.filtered(lambda t: t.saami_fulfilled)
+        if already_fulfilled:
+            already_fulfilled.is_post_processed = True
+        remaining = self - already_fulfilled
+        if remaining:
+            return super(PaymentTransaction, remaining)._post_process()
