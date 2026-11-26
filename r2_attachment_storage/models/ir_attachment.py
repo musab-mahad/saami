@@ -1,7 +1,10 @@
+import logging
+
 from odoo import api, models
 
 from . import r2_client
 
+_logger = logging.getLogger(__name__)
 EXCLUDED_URL_PREFIXES = ('/web/assets/',)
 
 
@@ -68,3 +71,49 @@ class IrAttachment(models.Model):
         if excluded:
             return super(IrAttachment, excluded.with_context(r2_skip=True)).write(vals)
         return super().write(vals)
+
+    def _get_datas_related_values(self, data, mimetype):
+        if self._storage() == 'r2' and mimetype:
+            return super(IrAttachment, self.with_context(r2_mimetype=mimetype))._get_datas_related_values(data, mimetype)
+        return super()._get_datas_related_values(data, mimetype)
+
+    @api.model
+    def _file_write(self, bin_value, checksum):
+        if self._storage() != 'r2':
+            return super()._file_write(bin_value, checksum)
+
+        cfg = r2_client.get_r2_config(self.env)
+        fname = r2_client.build_store_fname(checksum, cfg['key_prefix'])
+        object_key = r2_client.extract_object_key(fname)
+        if not r2_client.r2_object_exists(cfg, object_key):
+            r2_client.r2_put_object(
+                cfg,
+                object_key,
+                bin_value,
+                content_type=self.env.context.get('r2_mimetype'),
+            )
+        return fname
+
+    @api.model
+    def _file_read(self, fname):
+        if not r2_client.is_r2_fname(fname):
+            return super()._file_read(fname)
+
+        cfg = r2_client.get_r2_config(self.env)
+        object_key = r2_client.extract_object_key(fname)
+        if r2_client.is_r2_configured(cfg):
+            try:
+                data = r2_client.r2_get_object(cfg, object_key)
+                if data is not None:
+                    return data
+            except Exception:
+                _logger.warning("Failed reading R2 object %s", object_key, exc_info=True)
+
+        if cfg.get('fallback_local'):
+            parts = object_key.rsplit('/', 2)
+            if len(parts) >= 2:
+                local_fname = '/'.join(parts[-2:])
+                local_data = super()._file_read(local_fname)
+                if local_data:
+                    return local_data
+        return b''
