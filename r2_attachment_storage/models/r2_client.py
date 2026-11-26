@@ -43,9 +43,7 @@ def get_r2_config(env):
     params = env['ir.config_parameter'].sudo()
     prefix = (params.get_param('r2_storage.key_prefix') or '').strip().strip('/')
     public_url = (params.get_param('r2_storage.public_url') or '').strip().rstrip('/')
-    serve_mode = (params.get_param('r2_storage.serve_mode') or 'presigned').strip()
-    if serve_mode not in ('presigned', 'proxy'):
-        serve_mode = 'presigned'
+    serve_mode = 'proxy'
 
     return {
         'enabled': _as_bool(params.get_param('r2_storage.enabled'), default=False),
@@ -58,7 +56,7 @@ def get_r2_config(env):
         'serve_mode': serve_mode,
         'presigned_expiry': _as_int(params.get_param('r2_storage.presigned_expiry'), default=300),
         'fallback_local': _as_bool(params.get_param('r2_storage.fallback_local'), default=True),
-        'allow_delete': _as_bool(params.get_param('r2_storage.allow_delete'), default=False),
+        'allow_delete': _as_bool(params.get_param('r2_storage.allow_delete'), default=True),
     }
 
 

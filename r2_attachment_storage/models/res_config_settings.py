@@ -41,11 +41,11 @@ class ResConfigSettings(models.TransientModel):
     )
     r2_serve_mode = fields.Selection(
         selection=[
-            ('presigned', 'Presigned / Public URL Redirect (Full Downloads) + Proxy Resized Images'),
             ('proxy', 'Proxy All Requests Through Odoo'),
+            ('presigned', 'Presigned / Public URL Redirect'),
         ],
         string='Serving Mode',
-        default='presigned',
+        default='proxy',
         config_parameter='r2_storage.serve_mode',
     )
     r2_presigned_expiry = fields.Integer(
@@ -61,9 +61,9 @@ class ResConfigSettings(models.TransientModel):
     )
     r2_allow_delete = fields.Boolean(
         string='Allow R2 Object Deletion (GC)',
-        default=False,
+        default=True,
         config_parameter='r2_storage.allow_delete',
-        help='Keep OFF on staging/cloned databases so they cannot delete live production objects in R2.',
+        help='Uncheck on staging/cloned databases so they cannot delete live production objects in R2.',
     )
 
     def set_values(self):

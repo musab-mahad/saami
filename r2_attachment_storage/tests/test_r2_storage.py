@@ -113,12 +113,11 @@ class TestR2AttachmentStorage(TransactionCase):
                 'mimetype': 'image/png',
             })
 
-            # Full stream uses presigned URL redirect
+            # Stream proxies bytes through Odoo cleanly and supports image resizing
             full_stream = att._to_http_stream()
-            self.assertEqual(full_stream.type, 'url')
-            self.assertIn('fake-r2.example.com/saami-bucket/media/', full_stream.url)
+            self.assertEqual(full_stream.type, 'data')
+            self.assertEqual(full_stream.data, png)
 
-            # Resized image stream forces proxy data so ir.binary can resize
             resized_stream = self.env['ir.binary']._get_image_stream_from(att, width=50, height=50)
             self.assertEqual(resized_stream.type, 'data')
             resized_img = Image.open(BytesIO(resized_stream.data))

@@ -140,38 +140,6 @@ class IrAttachment(models.Model):
         if not r2_client.is_r2_fname(self.store_fname):
             return super()._to_http_stream()
 
-        cfg = r2_client.get_r2_config(self.env)
-        force_proxy = bool(self.env.context.get('r2_force_proxy'))
-        use_presigned = (
-            not force_proxy
-            and cfg['serve_mode'] == 'presigned'
-            and r2_client.is_r2_configured(cfg)
-        )
-
-        if use_presigned:
-            object_key = r2_client.extract_object_key(self.store_fname)
-            as_attachment = bool(
-                request and str(request.params.get('download', '')).lower() in ('1', 'true')
-            )
-            url = r2_client.r2_generate_download_url(
-                cfg,
-                object_key,
-                filename=self.name,
-                mimetype=self.mimetype,
-                as_attachment=as_attachment,
-            )
-            stream = Stream(
-                type='url',
-                url=url,
-                mimetype=self.mimetype,
-                download_name=self.name,
-                etag=self.checksum,
-                public=self.public,
-            )
-            if not cfg.get('public_url'):
-                stream.max_age = max(cfg['presigned_expiry'] - 10, 0)
-            return stream
-
         data = self.raw or b''
         return Stream(
             type='data',
@@ -183,6 +151,11 @@ class IrAttachment(models.Model):
             last_modified=self.write_date,
             public=self.public,
         )
+
+    @api.autovacuum
+    def _gc_file_store(self):
+        # Ensure local disk checklist cleanup still runs for migrated files and local web assets
+        return super(IrAttachment, self.with_context(r2_skip=True))._gc_file_store()
 
     @api.model
     def _file_delete(self, fname):
